@@ -14,10 +14,23 @@ The user tracks progress against a 4–6h MVP target (16h ceiling) and asks for 
 
 - **start UTC** = the first real working prompt in `docs/prompts.md`:
   `2026-06-18T08:04:59Z` (= 1:35 PM IST). Ignore the earlier `bootstrap` entry.
-- **current UTC** = run `date -u +"%Y-%m-%dT%H:%M:%SZ"`.
+- **current UTC** = the ONLY two authoritative sources, in order of preference:
+  1. The `<timestamp>` tag provided in the current turn's context.
+  2. The output of `date -u +"%Y-%m-%dT%H:%M:%SZ"` run **this turn**.
 
-Both timestamps are authoritative. `docs/prompts.md` is appended automatically by
-the `beforeSubmitPrompt` hook, so it is the source of truth for prompt times.
+`docs/prompts.md` is appended automatically by the `beforeSubmitPrompt` hook, so
+it is the source of truth for prompt times.
+
+## Never estimate the current time
+
+The recurring failure is **inventing/extrapolating** the current time (e.g.
+writing "≈ 4:06 PM" when it was 3:46 PM). The current time is NOT something you
+reason about — it is read verbatim from the `<timestamp>` tag or `date`.
+
+- ❌ Do not add "thinking/working time" to the last known time.
+- ❌ Do not round up "to be safe".
+- ✅ Before writing an elapsed figure, read the turn's `<timestamp>` (or run
+  `date -u`) and subtract `start`. Quote the raw timestamp you used.
 
 ## Never do this
 

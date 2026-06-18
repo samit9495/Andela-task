@@ -15,6 +15,11 @@
 
 ## Lessons
 
+### 2026-06-18 — Never estimate the current time; read it from the timestamp/date
+**Context**: Reporting cumulative elapsed time at the end of Phase 5.
+**Issue**: Reported "now ≈ 4:06 PM IST" when the real time was 3:46 PM (writing) / 3:52 PM (now). I extrapolated the current time by mentally adding working time to the last value instead of reading it. This is a different failure from the earlier "sum of phases" bug — here the *start* math was fine but the *current time* was invented and overshot by ~20 min.
+**Fix/Insight**: The current time is never reasoned about. Read it verbatim from (1) the turn's `<timestamp>` context tag, or (2) `date -u` run that same turn. Then subtract `start` (`2026-06-18T08:04:59Z`). Quote the raw timestamp used. Strengthened `.cursor/rules/andela-time-tracking.mdc` with a "Never estimate the current time" section.
+
 ### 2026-06-18 — Elapsed time must be (now − start), never a sum of phase estimates
 **Context**: Reporting cumulative elapsed time toward the 4–6h MVP target at the end of each phase.
 **Issue**: Reported "≈ 1h 55m" cumulative when only ~1h 29m of wall-clock had passed since the 1:35 PM IST start. Recurring error (also happened in Phase 1). Root cause: I summed per-phase deltas (each rounded up and inflated by thinking/tool time), so the total exceeded real wall-clock — which is impossible.
