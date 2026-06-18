@@ -69,3 +69,48 @@ class TestIncidentsApi:
 
         assert len(open_response.json()) == 1
         assert resolved_response.json() == []
+
+
+class TestPatchIncidentStatus:
+    def test_resolve_sets_status_and_resolved_at(self, client, db):
+        incident = _seed_incident(db)
+
+        response = client.patch(
+            f"/api/v1/incidents/{incident.id}",
+            json={"status": IncidentStatus.RESOLVED.value},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == IncidentStatus.RESOLVED.value
+        assert body["resolved_at"] is not None
+
+    def test_acknowledge_does_not_set_resolved_at(self, client, db):
+        incident = _seed_incident(db)
+
+        response = client.patch(
+            f"/api/v1/incidents/{incident.id}",
+            json={"status": IncidentStatus.ACKNOWLEDGED.value},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == IncidentStatus.ACKNOWLEDGED.value
+        assert body["resolved_at"] is None
+
+    def test_patch_unknown_returns_404(self, client):
+        response = client.patch(
+            "/api/v1/incidents/999", json={"status": IncidentStatus.RESOLVED.value}
+        )
+
+        assert response.status_code == 404
+        assert response.json()["code"] == "incident_not_found"
+
+    def test_invalid_status_returns_422(self, client, db):
+        incident = _seed_incident(db)
+
+        response = client.patch(
+            f"/api/v1/incidents/{incident.id}", json={"status": "bogus"}
+        )
+
+        assert response.status_code == 422
