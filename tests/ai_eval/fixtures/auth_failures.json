@@ -4,5 +4,6 @@
     "incident_summary": "auth-service surge of invalid jwt token and login failures returning 401",
     "top_events": [["Invalid jwt token", 120, "ERROR"], ["Login failed 401", 80, "ERROR"]]
   },
-  "expected_category": "authentication"
+  "expected_category": "authentication",
+  "expected_root_cause_keywords": ["authentication"]
 }
