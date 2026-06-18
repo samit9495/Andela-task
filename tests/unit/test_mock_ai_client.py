@@ -69,3 +69,27 @@ class TestMockAIClient:
             client.complete_structured(
                 prompt="x", schema=ClassificationOutput.__mro__[1], request_id="r"
             )
+
+    def test_explicit_category_hint_overrides_keyword_heuristic(self):
+        """Chained-agent prompts carry `Category: <name>` so downstream stays consistent."""
+        client = MockAIClient()
+        prompt = (
+            "Some preamble.\n<<<INPUT>>>\nCategory: authentication\n"
+            "Incident summary: a database pool timeout query.\n<<<END>>>\n"
+        )
+
+        out = client.complete_structured(prompt=prompt, schema=ClassificationOutput, request_id="r")
+
+        assert out.category == IncidentCategory.AUTHENTICATION
+
+    def test_unknown_explicit_category_falls_through_to_keywords(self):
+        """A malformed Category: value must not crash; heuristic still wins."""
+        client = MockAIClient()
+        prompt = (
+            "<<<INPUT>>>\nCategory: not_a_real_category\n"
+            "Incident summary: database pool timeout query.\n<<<END>>>\n"
+        )
+
+        out = client.complete_structured(prompt=prompt, schema=ClassificationOutput, request_id="r")
+
+        assert out.category == IncidentCategory.DATABASE
