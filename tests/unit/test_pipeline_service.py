@@ -75,9 +75,7 @@ class TestPipelineService:
     def test_process_services_aggregates_only_real_incidents(self, db, tmp_path):
         _seed_spike(db)
 
-        incidents = _pipeline(db, tmp_path).process_services(
-            ["payment-api", "quiet-service"], _NOW
-        )
+        incidents = _pipeline(db, tmp_path).process_services(["payment-api", "quiet-service"], _NOW)
 
         assert [i.service for i in incidents] == ["payment-api"]
 
