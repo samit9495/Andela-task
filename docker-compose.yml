@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.backend
+    image: agentic-observability-backend
+    ports:
+      - "8000:8000"
+    environment:
+      WATCHDOG_DATABASE_URL: sqlite:////data/watchdog.db
+      USE_MOCK_AI: "true"
+    env_file:
+      - .env
+    volumes:
+      - watchdog-data:/data
+
+  # Frontend container is implemented in Phase 4. Enable once frontend/ exists:
+  # frontend:
+  #   build:
+  #     context: .
+  #     dockerfile: infra/Dockerfile.frontend
+  #   image: agentic-observability-frontend
+  #   ports:
+  #     - "5173:80"
+  #   depends_on:
+  #     - backend
+
+volumes:
+  watchdog-data:

@@ -1,0 +1,15 @@
+# syntax=docker/dockerfile:1
+# Placeholder scaffold for the React dashboard container.
+# The frontend is implemented in Phase 4; this Dockerfile is wired into
+# docker-compose.yml (commented) and will be enabled when frontend/ exists.
+
+FROM node:20-slim AS build
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci || true
+COPY frontend ./
+RUN npm run build || true
+
+FROM nginx:1.27-alpine AS runtime
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80

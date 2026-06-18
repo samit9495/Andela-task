@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile:1
+# Multi-stage build for the FastAPI backend. Runs as a non-root user.
+
+FROM python:3.12-slim AS builder
+WORKDIR /app
+ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+COPY pyproject.toml README.md ./
+COPY backend ./backend
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/pip install --upgrade pip \
+    && /opt/venv/bin/pip install .
+
+FROM python:3.12-slim AS runtime
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    WATCHDOG_DATABASE_URL=sqlite:////data/watchdog.db
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+COPY backend ./backend
+COPY data ./data
+
+# Non-root user; /data is the SQLite volume mount point.
+RUN useradd --create-home --uid 1000 appuser \
+    && mkdir -p /data \
+    && chown -R appuser:appuser /app /data
+USER appuser
+
+EXPOSE 8000
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
