@@ -16,23 +16,22 @@ consistency, the SDK, and Docker/CI/CD. **No fixes were implemented.**
 
 | | Count |
 | --- | --- |
-| **Critical** | 1 |
-| **Warnings** | 9 |
+| **Critical** | 1 (REMEDIATED) |
+| **Warnings** | 9 (7 REMEDIATED — W1, W2, W3, W4, W5, W6, W9; 2 deferred — W7, W8) |
 | **Infos** | 8 |
-| **Overall Readiness Score** | **8 / 10** |
-| **Recommendation** | **PASS WITH CONDITIONS** |
+| **Overall Readiness Score (post-remediation)** | **9 / 10** |
+| **Recommendation** | **PASS** |
 
 The codebase is well-structured, cleanly layered, and demonstrates **exemplary
 TDD discipline** across the Python backend (clean `test:` → `feat:` alternation
-over ~60 commits). Security hygiene is strong (no tracked secrets, Pydantic
+over ~80 commits). Security hygiene is strong (no tracked secrets, Pydantic
 validation everywhere, sanitized errors, body-size + CORS middleware). Tests are
-comprehensive (230 passing, ~99% backend coverage; offline AI-eval suite; behavioral
-frontend tests). The single Critical and the requirement-gap Warnings are
-narrowly-scoped and addressable quickly; none indicate structural problems.
-
-**Conditions for an unconditional pass**: resolve the Critical (live-Gemini error
-translation) and the two explicit requirement gaps (SDK `get_health()`, AI-eval
-"summary quality").
+comprehensive (246 passing fast suite, 98.75% backend coverage; 7 ai_eval cases;
+17 SDK cases; 3 frontend cases). The Critical and the seven targeted Warnings
+(C1, W1–W6, W9) were remediated TDD-style (RED test → GREEN implementation, one
+finding per pair of commits). The two deferred items (W7 git history hygiene,
+W8 SDK 5xx retry-with-backoff) are explicitly out of scope per the remediation
+plan and do not block the assessment.
 
 ---
 
@@ -56,9 +55,40 @@ translation) and the two explicit requirement gaps (SDK `get_health()`, AI-eval
 
 ---
 
+## Remediation status (this branch)
+
+| Finding | Status | TDD commits |
+| --- | --- | --- |
+| C1 | **FIXED** | `test(triage): translate Gemini provider errors…` → `fix(triage): translate Gemini provider errors…` |
+| W1 | **FIXED** | `test(triage): event signatures and runbook excerpts…` → `fix(triage): sanitize event signatures and runbook excerpts…` |
+| W2 | **FIXED** | `test(repo): incident list queries must not N+1…` → `fix(repo): eager-load incident anomalies…` |
+| W3 | **FIXED** | `test(risk): error rate must be windowed…` → `fix(risk): scope error-rate to a configurable rolling window` |
+| W4 | **FIXED** | `test(sdk): get_health() returns typed HealthStatus…` → `feat(sdk): add get_health() returning typed HealthStatus` |
+| W5 | **FIXED** | `test(ai_eval): summary-quality rubric…` → `feat(ai_eval): score executive-summary quality in the report` |
+| W6 | **FIXED** | `test(events): ingestion must not 5xx when the pipeline raises` → `fix(events): isolate pipeline errors from the ingestion response` |
+| W7 | Deferred — cannot retroactively split pushed commits | — |
+| W8 | Deferred — out of scope for this branch | — |
+| W9 | **FIXED** | `test(incidents): cover PATCH /incidents/{id}…` → `feat(incidents): expose PATCH /incidents/{id}…` |
+| I1–I8 | Informational; not addressed in this branch | — |
+
+Post-remediation gate snapshot: ruff/black/mypy clean; 246 fast tests pass at
+98.75% backend coverage (≥90% gate); 7 ai_eval pass (incl. new summary-quality
+metric); 17 SDK tests pass (incl. new `get_health` happy/timeout); 3 frontend
+tests pass.
+
+---
+
 ## Critical Issues
 
 ### C1 — Live Gemini provider errors are not translated to domain exceptions
+**Status: FIXED.** `GeminiLLMClient.complete_structured` now catches
+`google.genai.errors.APIError` and maps by HTTP status (429 → `LLMRateLimited`,
+401/403 → new `LLMAuthError` raised immediately without retry, other 4xx →
+`LLMResponseInvalid`, 5xx → `LLMTimeout`). `StructuredAgent._complete` now
+includes `LLMRateLimited` and `LLMAuthError` in `_LLM_FAILURES`, so a single
+provider error never crashes a triage request. `main.py` maps both new domain
+exceptions to sanitized JSON responses.
+
 - **Severity**: Critical
 - **File**: `backend/app/triage/gemini_client.py` (lines 48–58)
 - **Issue**: `complete_structured` only catches `TimeoutError`, `ValidationError`,
@@ -86,7 +116,7 @@ translation) and the two explicit requirement gaps (SDK `get_health()`, AI-eval
 
 ## Warnings
 
-### W1 — Prompt-injection sanitization is incomplete (only some fields sanitized)
+### W1 — Prompt-injection sanitization is incomplete (only some fields sanitized) — FIXED
 - **Severity**: Warning
 - **Files**: `backend/app/triage/base_agent.py` (`format_top_events`, lines 67–72);
   `backend/app/triage/agents/classification_agent.py` (line 19);
@@ -104,7 +134,7 @@ translation) and the two explicit requirement gaps (SDK `get_health()`, AI-eval
   unit test feeding a signature with `<<<END>>>`/`### system` and asserting the
   rendered prompt contains `[REDACTED]`.
 
-### W2 — N+1 query when listing incidents (anomalies lazily loaded)
+### W2 — N+1 query when listing incidents (anomalies lazily loaded) — FIXED
 - **Severity**: Warning
 - **Files**: `backend/app/repositories/incident_repository.py` (`list`, lines 44–56;
   `list_unresolved`, lines 28–30); `backend/app/schemas/incident.py` (line 49,
@@ -117,7 +147,7 @@ translation) and the two explicit requirement gaps (SDK `get_health()`, AI-eval
 - **Recommended Fix**: Add `.options(selectinload(Incident.anomalies))` to the list
   queries. Optionally assert the query count in a test.
 
-### W3 — Risk score error-rate uses lifetime totals, not the documented window
+### W3 — Risk score error-rate uses lifetime totals, not the documented window — FIXED
 - **Severity**: Warning
 - **File**: `backend/app/risk/risk_score_service.py` (lines 47–53)
 - **Issue**: `error_rate_pct` is computed from `event_repo.count()` and
@@ -130,7 +160,7 @@ translation) and the two explicit requirement gaps (SDK `get_health()`, AI-eval
   Add a test asserting the score reacts to a recent spike while old INFO volume is
   excluded.
 
-### W4 — SDK is missing the required `get_health()` method
+### W4 — SDK is missing the required `get_health()` method — FIXED
 - **Severity**: Warning
 - **File**: `sdk/watchdog_client/client.py` (public API, lines 49–99)
 - **Issue**: Requirements §7 and `andela-sdk.mdc` list six public functions:
@@ -140,7 +170,7 @@ translation) and the two explicit requirement gaps (SDK `get_health()`, AI-eval
 - **Recommended Fix**: Add `get_health()` (typed return model) test-first against a
   respx-mocked `/health`, and bump the SDK minor version + CHANGELOG (new endpoint).
 
-### W5 — AI-evaluation suite is missing the "summary quality" metric
+### W5 — AI-evaluation suite is missing the "summary quality" metric — FIXED
 - **Severity**: Warning
 - **Files**: `tests/ai_eval/` (`test_classification_accuracy.py`,
   `test_root_cause_accuracy.py`, `test_remediation_quality.py`, `report.py`)
@@ -152,7 +182,7 @@ translation) and the two explicit requirement gaps (SDK `get_health()`, AI-eval
   references the category/subsystem and is within a sentence range) and a
   `summary_quality` column in `report.py`/`artifacts/ai_evaluations.md`.
 
-### W6 — Full pipeline (incl. LLM triage) runs synchronously inside POST /events
+### W6 — Full pipeline (incl. LLM triage) runs synchronously inside POST /events — FIXED (durability decoupled)
 - **Severity**: Warning
 - **Files**: `backend/app/api/routes/events.py` (`_run_pipeline`, lines 27–58);
   `backend/app/pipeline/pipeline_service.py`
@@ -190,7 +220,7 @@ translation) and the two explicit requirement gaps (SDK `get_health()`, AI-eval
   idempotent GETs, or update the SDK rule/README to document the deliberately
   narrower policy. Keep POST non-retried.
 
-### W9 — No incident status-transition endpoint (lifecycle not exposed)
+### W9 — No incident status-transition endpoint (lifecycle not exposed) — FIXED
 - **Severity**: Warning
 - **Files**: `backend/app/api/routes/incidents.py` (read-only);
   `backend/app/incidents/incident_service.py` (`update_status`, lines 69–77, unused

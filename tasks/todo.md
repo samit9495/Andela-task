@@ -13,6 +13,20 @@
 
 ## Completed
 
+### 2026-06-18 — Repository review remediation (C1, W1-W6, W9)
+- [x] C1: Translate google.genai APIError -> domain exceptions (LLMRateLimited / new LLMAuthError / LLMResponseInvalid / LLMTimeout); broaden _LLM_FAILURES; auth raises without retry; new handler mappings in main.py — TDD
+- [x] W1: Sanitize event signatures in format_top_events and runbook title/excerpt in RemediationAgent._runbook_block — TDD with FakeLLMClient prompt capture
+- [x] W2: selectinload(Incident.anomalies) on IncidentRepository.list and list_unresolved with .unique(); query-count test via after_cursor_execute listener — TDD
+- [x] W3: Add EventRepository.count/count_by_level since= filter; new WATCHDOG_RISK_ERROR_RATE_WINDOW_SECONDS (default 900); clock-injectable RiskScoreService.calculate(now=...); risk integration test now uses wall-clock now — TDD
+- [x] W4: SDK get_health() returning typed HealthStatus; export the model; bump to 0.2.0 + CHANGELOG entry; respx happy + timeout — TDD
+- [x] W5: expected_summary_keywords on all 5 ai_eval fixtures; new @ai_eval test_summary_quality; report.py + evaluation-report assertions extended with summary_quality metric; MockAIClient now honors explicit Category: line so chained-agent prompts stay consistent — TDD
+- [x] W6: Wrap _run_pipeline in try/except + logger.exception, so POST /events and /events/batch always return 201 after persistence even when the pipeline raises — TDD
+- [x] W9: PATCH /api/v1/incidents/{id} + IncidentStatusUpdate schema (extra="forbid"), delegating to IncidentService.update_status — TDD with RESOLVED/intermediate/404/422 cases
+- [x] Update FULL_REPOSITORY_REVIEW.md remediation status table and per-finding markers
+- **Status**: done
+- **Summary**: 246 fast backend tests pass at 98.75% coverage (≥90% gate); 7 ai_eval tests pass; 17 SDK tests pass; 3 frontend tests pass; ruff/black/mypy clean. 8 TDD pairs (test:/feat: or test:/fix:) landed, one per finding. W7 (split historical commits) and W8 (SDK 5xx backoff) deferred per the remediation plan.
+
+
 ### 2026-06-18 — Phase 6: Hardening, Docker, CI/CD, Evaluation, Documentation
 - [x] Security: BodySizeLimitMiddleware (413) + CORS allowlist wired from config; bound previously-ignored WATCHDOG_REQUEST_BODY_MAX_BYTES — TDD
 - [x] AI eval: classification→root-cause pipeline accuracy test + per-fixture root-cause keywords + deterministic scorecard generator (artifacts/ai_evaluations.md, gitignored)
