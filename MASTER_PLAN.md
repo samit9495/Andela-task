@@ -524,11 +524,13 @@ Rationale: every step keeps the suite green and the app runnable; the demo-criti
 - [x] AI eval fixtures pass thresholds (classification accuracy 100% ≥ 80%; remediation cites runbook)
 - [x] Coverage 99% (147 tests total); triage HTTP endpoint/DI wiring deferred to Phase 4
 
-**M4 — Alerts + Topology + Dashboard**
-- [ ] Incident raises simulated webhook alert (dedup + rate-limit)
-- [ ] `GET /alerts`, `GET /topology` (blast radius) work
-- [ ] Dashboard Overview + Incident Center + AI Analysis render live data
-- [ ] (Nice) Topology view + Trends page
+**M4 — Alerts + Topology + Dashboard** ✅ (Phase 4 complete)
+- [x] Incident raises simulated alerts across 4 channels (dedup + rate-limit per incident+channel)
+- [x] `GET /api/v1/alerts`, `GET /api/v1/topology` (incident-aware blast radius) work
+- [x] Pipeline wired into `POST /events[/batch]`: detect → correlate → triage (Mock AI default) → alert
+- [x] Risk score counts open alerts; `/metrics` expanded (incidents, alerts, risk score)
+- [x] Dashboard Overview + Incident Center + AI Analysis + Topology render live API data
+- [x] Backend coverage 97% on Phase 4 modules (180 tests); 3 Vitest behavioral tests green
 
 **M5 — SDK + Synthetic Traffic**
 - [ ] `watchdog_client` 6 methods, typed, mocked tests, semver

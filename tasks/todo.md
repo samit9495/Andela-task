@@ -13,6 +13,15 @@
 
 ## Completed
 
+### 2026-06-18 — Phase 4: Alerts + Topology + Dashboard
+- [x] Alert model + repository; 4 simulated channels (dashboard/webhook/email/slack); AlertService fan-out with dedup + rate-limit per incident+channel; sanitized payloads — TDD
+- [x] ServiceTopology model + repository + idempotent JSON seeder (data/topology.json); TopologyEngine blast radius (reverse-BFS) + root service — TDD
+- [x] PipelineService: detect → correlate → one-shot triage → alert; wired into POST /events[/batch] via DI (Mock AI default, Gemini when configured) — TDD
+- [x] Persist recommended_actions + runbook_references on incident; GET /api/v1/alerts + GET /api/v1/topology (incident-aware blast radius); risk score counts open alerts; /metrics expanded — TDD
+- [x] React + Vite + TS dashboard (TanStack Query): Overview, Incident Center, AI Analysis, Topology; 3 Vitest behavioral tests
+- **Status**: done
+- **Summary**: 180 backend tests pass (incl. ai_eval), 97% coverage on Phase 4 modules; ruff/black/mypy green. Frontend builds + 3 behavioral tests pass. Runtime smoke confirms topology seed + live endpoints. End-to-end pipeline proven at service level (storm → triaged incident + alerts + risk drop).
+
 ### 2026-06-18 — Phase 3: Agentic Triage + RAG
 - [x] LLMClient protocol + FakeLLMClient (test double) + GeminiLLMClient (only google.genai importer) + MockAIClient (offline heuristic) — TDD
 - [x] LLMEvaluation ORM model + repository; PromptLog records every call to llm_evaluations + appends docs/llm_prompts.md — TDD
