@@ -1,5 +1,6 @@
 """Event ingestion and retrieval endpoints."""
 
+import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query, status
@@ -21,14 +22,29 @@ from backend.app.schemas.event import (
     EventRead,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/v1", tags=["events"])
 
 
 def _run_pipeline(pipeline: PipelineService, events: list[Event]) -> None:
-    """Run detection -> correlation -> triage -> alert for each affected service."""
+    """Run detection->correlation->triage->alert; failures must not break ingestion.
+
+    The ingestion contract is "if the API returned 201, the events are persisted".
+    A downstream pipeline failure (detector bug, alert channel timeout, LLM
+    outage) is logged for ops follow-up but never propagates back to the caller.
+    """
     services = {event.service for event in events}
-    if services:
+    if not services:
+        return
+    try:
         pipeline.process_services(services, now=datetime.now(tz=UTC))
+    except Exception:
+        logger.exception(
+            "Pipeline failed after ingestion services=%s event_count=%s",
+            sorted(services),
+            len(events),
+        )
 
 
 @router.post("/events", response_model=EventRead, status_code=status.HTTP_201_CREATED)
