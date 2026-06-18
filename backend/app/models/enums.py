@@ -10,3 +10,21 @@ class LogLevel(str, Enum):
     WARN = "WARN"
     ERROR = "ERROR"
     CRITICAL = "CRITICAL"
+
+
+class Severity(str, Enum):
+    """Incident severity levels."""
+
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class IncidentStatus(str, Enum):
+    """Incident lifecycle states."""
+
+    OPEN = "OPEN"
+    INVESTIGATING = "INVESTIGATING"
+    MITIGATED = "MITIGATED"
+    RESOLVED = "RESOLVED"
