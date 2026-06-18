@@ -13,12 +13,13 @@ from .models import (
     BatchEventResult,
     EventCreate,
     EventRead,
+    HealthStatus,
     IncidentRead,
     RiskScore,
     RunbookReference,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "WatchdogClient",
@@ -30,6 +31,7 @@ __all__ = [
     "RunbookReference",
     "AlertRead",
     "RiskScore",
+    "HealthStatus",
     "WatchdogError",
     "WatchdogAPIError",
     "WatchdogTimeout",

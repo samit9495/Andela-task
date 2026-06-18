@@ -3,6 +3,13 @@
 All notable changes to `watchdog_client` are documented here. This project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-06-18
+
+### Added
+- `WatchdogClient.get_health()` returning the typed `HealthStatus`
+  (`status`, `version`, `ai_mode`), wrapping `GET /health`.
+- `HealthStatus` model exported from `watchdog_client`.
+
 ## [0.1.0] - 2026-06-18
 
 ### Added

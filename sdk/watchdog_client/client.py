@@ -14,6 +14,7 @@ from .models import (
     BatchEventResult,
     EventCreate,
     EventRead,
+    HealthStatus,
     IncidentRead,
     RiskScore,
 )
@@ -97,6 +98,11 @@ class WatchdogClient:
             params["incident_id"] = incident_id
         response = self._get("/api/v1/alerts", params=params)
         return [self._parse(AlertRead, item) for item in response.json()]
+
+    def get_health(self) -> HealthStatus:
+        """Return the backend health status (status, version, ai_mode)."""
+        response = self._get("/health")
+        return self._parse(HealthStatus, response.json())
 
     def close(self) -> None:
         self._client.close()

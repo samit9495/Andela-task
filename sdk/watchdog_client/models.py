@@ -100,3 +100,11 @@ class RiskScore(BaseModel):
     error_penalty: float
     alert_penalty: float
     incident_penalty: float
+
+
+class HealthStatus(BaseModel):
+    """Mirror of the backend ``GET /health`` response."""
+
+    status: str
+    version: str
+    ai_mode: str

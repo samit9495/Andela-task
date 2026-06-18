@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "watchdog-client"
-version = "0.1.0"
+version = "0.2.0"
 description = "Typed Python SDK for the Agentic Observability Platform API."
 authors = [{ name = "Samit Pawar" }]
 license = { text = "MIT" }
