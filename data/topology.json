@@ -1,0 +1,9 @@
+{
+  "checkout-service": ["payment-api", "auth-service"],
+  "payment-api": ["postgres", "auth-service"],
+  "orders-api": ["postgres", "payment-api"],
+  "auth-service": ["postgres", "redis"],
+  "notifications": ["redis"],
+  "postgres": [],
+  "redis": []
+}
