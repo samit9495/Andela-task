@@ -31,3 +31,7 @@ class LLMResponseInvalid(DomainError):
 
 class LLMRateLimited(DomainError):
     """The LLM provider rejected the call due to rate limiting."""
+
+
+class LLMAuthError(DomainError):
+    """The LLM provider rejected the call due to authentication/authorization."""

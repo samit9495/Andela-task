@@ -7,11 +7,33 @@ a single retry, and translation of provider failures into domain exceptions.
 from typing import Any
 
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types
 from pydantic import ValidationError
 
-from backend.app.core.exceptions import LLMResponseInvalid, LLMTimeout
+from backend.app.core.exceptions import (
+    DomainError,
+    LLMAuthError,
+    LLMRateLimited,
+    LLMResponseInvalid,
+    LLMTimeout,
+)
 from backend.app.triage.llm_client import T
+
+_AUTH_CODES = {401, 403}
+
+
+def _translate_api_error(exc: genai_errors.APIError) -> DomainError:
+    """Map a google-genai APIError to a domain exception by HTTP status."""
+    code = getattr(exc, "code", None) or 0
+    detail = str(exc)
+    if code in _AUTH_CODES:
+        return LLMAuthError(detail)
+    if code == 429:
+        return LLMRateLimited(detail)
+    if isinstance(exc, genai_errors.ServerError):
+        return LLMTimeout(detail)
+    return LLMResponseInvalid(detail)
 
 
 class GeminiLLMClient:
@@ -44,7 +66,7 @@ class GeminiLLMClient:
             temperature=temperature,
             max_output_tokens=max_tokens,
         )
-        last_error: LLMResponseInvalid | LLMTimeout = LLMTimeout("no attempt executed")
+        last_error: DomainError = LLMTimeout("no attempt executed")
         for _ in range(self._max_retries + 1):
             try:
                 response = self._client.models.generate_content(
@@ -55,4 +77,10 @@ class GeminiLLMClient:
                 last_error = LLMTimeout(str(exc))
             except (ValidationError, ValueError):
                 last_error = LLMResponseInvalid("structured output failed schema validation")
+            except genai_errors.APIError as exc:
+                translated = _translate_api_error(exc)
+                # Auth failures are non-retryable: raise immediately.
+                if isinstance(translated, LLMAuthError):
+                    raise translated from exc
+                last_error = translated
         raise last_error

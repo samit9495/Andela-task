@@ -23,6 +23,8 @@ from backend.app.core.exceptions import (
     DomainError,
     EventValidationError,
     IncidentNotFound,
+    LLMAuthError,
+    LLMRateLimited,
     LLMResponseInvalid,
     LLMTimeout,
     TriageFailed,
@@ -38,6 +40,8 @@ _DOMAIN_ERROR_RESPONSES: dict[type[DomainError], tuple[int, str]] = {
     TriageFailed: (503, "triage_failed"),
     LLMTimeout: (504, "llm_timeout"),
     LLMResponseInvalid: (502, "llm_response_invalid"),
+    LLMRateLimited: (429, "llm_rate_limited"),
+    LLMAuthError: (502, "llm_auth_error"),
 }
 _DOMAIN_ERROR_DEFAULT = (400, "domain_error")
 

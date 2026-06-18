@@ -1,7 +1,6 @@
 """Unit tests for the Classification Agent."""
 
 import pytest
-
 from backend.app.core.exceptions import LLMAuthError, LLMRateLimited, LLMResponseInvalid
 from backend.app.models.enums import IncidentCategory
 from backend.app.triage.agents.classification_agent import ClassificationAgent

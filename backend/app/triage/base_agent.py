@@ -6,11 +6,16 @@ logging and LLM failure handling live in exactly one place (DRY).
 
 from time import perf_counter
 
-from backend.app.core.exceptions import LLMRateLimited, LLMResponseInvalid, LLMTimeout
+from backend.app.core.exceptions import (
+    LLMAuthError,
+    LLMRateLimited,
+    LLMResponseInvalid,
+    LLMTimeout,
+)
 from backend.app.triage.llm_client import LLMClient, T
 from backend.app.triage.prompt_log import PromptRecorder
 
-_LLM_FAILURES = (LLMTimeout, LLMResponseInvalid, LLMRateLimited)
+_LLM_FAILURES = (LLMTimeout, LLMResponseInvalid, LLMRateLimited, LLMAuthError)
 
 
 class StructuredAgent:

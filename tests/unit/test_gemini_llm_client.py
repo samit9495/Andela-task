@@ -1,8 +1,6 @@
 """Unit tests for GeminiLLMClient (with a stubbed genai client, no network)."""
 
 import pytest
-from google.genai import errors as genai_errors
-
 from backend.app.core.exceptions import (
     LLMAuthError,
     LLMRateLimited,
@@ -12,6 +10,7 @@ from backend.app.core.exceptions import (
 from backend.app.models.enums import IncidentCategory
 from backend.app.triage.gemini_client import GeminiLLMClient
 from backend.app.triage.schemas import ClassificationOutput
+from google.genai import errors as genai_errors
 
 
 def _api_error(cls: type[genai_errors.APIError], code: int, status: str = "") -> Exception:
