@@ -399,3 +399,41 @@ Before coding provide:
 - Tests
 - Acceptance criteria
 ```
+
+
+## 2026-06-18T10:23:49Z - conversation `4a10cd76-b595-4bb8-8f6d-e7043a7f537e` - mode `agent`
+
+**Attachments:** `andela-testing.mdc`, `andela-error-handling.mdc`, `andela-commit-hygiene.mdc`, `andela-craftsmanship.mdc`, `ai-standards.mdc`, `ai-shortcuts.mdc`, `andela-security.mdc`, `andela-tdd-discipline.mdc`, `andela-code-quality.mdc`, `andela-fastapi-core.mdc`, `andela-agentic-ai.mdc`, `ai-workflow.mdc`, `AGENTS.md`, `andela-time-tracking.mdc`
+
+```text
+We are starting Phase 6 — Hardening, Docker, CI/CD, Evaluation, Documentation.
+
+Read MASTER_PLAN.md.
+
+Implement:
+
+- Dockerfiles
+- docker-compose.yml
+- CI/CD workflows
+- AI evaluation suite
+- README
+- presentation deck
+- security review fixes
+
+Before coding provide:
+
+- Files
+- Tests
+- Validation checklist
+- Acceptance criteria
+
+Wait for approval.
+```
+
+## 2026-06-18T10:26:22Z - conversation `4a10cd76-b595-4bb8-8f6d-e7043a7f537e` - mode `agent`
+
+**Attachments:** `andela-testing.mdc`, `andela-error-handling.mdc`, `andela-commit-hygiene.mdc`, `andela-craftsmanship.mdc`, `ai-standards.mdc`, `ai-shortcuts.mdc`, `andela-security.mdc`, `andela-tdd-discipline.mdc`, `andela-code-quality.mdc`, `andela-fastapi-core.mdc`, `andela-agentic-ai.mdc`, `ai-workflow.mdc`, `AGENTS.md`, `andela-time-tracking.mdc`
+
+```text
+proceed.
+```

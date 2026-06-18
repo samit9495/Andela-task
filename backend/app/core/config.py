@@ -31,6 +31,14 @@ class Settings(BaseSettings):
 
     database_url: str = Field(default="sqlite:///./var/watchdog.db", alias="WATCHDOG_DATABASE_URL")
 
+    # --- Security ---
+    request_body_max_bytes: int = Field(
+        default=1_048_576, alias="WATCHDOG_REQUEST_BODY_MAX_BYTES"
+    )
+    cors_allow_origins: str = Field(
+        default="http://localhost:5173", alias="WATCHDOG_CORS_ALLOW_ORIGINS"
+    )
+
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
     use_mock_ai: bool = Field(default=False, alias="USE_MOCK_AI")
     model_name: str = Field(default="gemini-1.5-flash", alias="MODEL_NAME")
@@ -61,6 +69,11 @@ class Settings(BaseSettings):
 
     # --- Topology (see MASTER_PLAN Component 6) ---
     topology_path: str = Field(default="data/topology.json", alias="TOPOLOGY_PATH")
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Parse the comma-separated CORS allowlist into a list of origins."""
+        return [origin.strip() for origin in self.cors_allow_origins.split(",") if origin.strip()]
 
     @property
     def ai_mode(self) -> str:

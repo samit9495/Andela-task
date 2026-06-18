@@ -5,8 +5,10 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from backend.app.api.middleware import BodySizeLimitMiddleware
 from backend.app.api.routes import (
     alerts,
     events,
@@ -72,6 +74,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.request_body_max_bytes)
     register_exception_handlers(app)
     app.include_router(health.router)
     app.include_router(events.router)
