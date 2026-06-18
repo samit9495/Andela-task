@@ -35,6 +35,20 @@ class Settings(BaseSettings):
     use_mock_ai: bool = Field(default=False, alias="USE_MOCK_AI")
     model_name: str = Field(default="gemini-1.5-flash", alias="MODEL_NAME")
 
+    # --- Detection (see MASTER_PLAN section 26.2) ---
+    detection_bucket_seconds: int = Field(default=60, alias="DETECTION_BUCKET_SECONDS")
+    z_score_threshold: float = Field(default=3.0, alias="DETECTION_Z_SCORE_THRESHOLD")
+    min_baseline_samples: int = Field(default=10, alias="DETECTION_MIN_BASELINE_SAMPLES")
+    ewma_alpha: float = Field(default=0.3, alias="DETECTION_EWMA_ALPHA")
+    ewma_drift_threshold: float = Field(default=3.0, alias="DETECTION_EWMA_DRIFT_THRESHOLD")
+    signature_burst_multiplier: float = Field(
+        default=5.0, alias="DETECTION_SIGNATURE_BURST_MULTIPLIER"
+    )
+    signature_burst_floor: int = Field(default=10, alias="DETECTION_SIGNATURE_MIN_ABSOLUTE")
+
+    # --- Correlation (see MASTER_PLAN section 26.1) ---
+    correlation_window_seconds: int = Field(default=300, alias="CORRELATION_WINDOW_SECONDS")
+
     @property
     def ai_mode(self) -> str:
         """Return ``"gemini"`` only when a real key is set and mock is disabled."""
