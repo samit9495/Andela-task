@@ -76,6 +76,8 @@ class TriageService:
         incident.root_cause = root_cause.root_cause
         incident.summary = exec_summary.executive_summary
         incident.confidence_score = confidence
+        incident.recommended_actions = list(remediation.recommended_actions)
+        incident.runbook_references = [ref.model_dump() for ref in remediation.references]
         self._db.commit()
 
         return IncidentReport(

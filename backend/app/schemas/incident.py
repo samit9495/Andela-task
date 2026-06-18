@@ -7,6 +7,13 @@ from pydantic import BaseModel, ConfigDict
 from backend.app.models.enums import IncidentStatus, Severity
 
 
+class RunbookReferenceRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    slug: str
+    title: str
+
+
 class AnomalyRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -34,6 +41,8 @@ class IncidentRead(BaseModel):
     root_cause: str | None
     summary: str | None
     confidence_score: float | None
+    recommended_actions: list[str] | None
+    runbook_references: list[RunbookReferenceRead] | None
     created_at: datetime
     updated_at: datetime
     resolved_at: datetime | None
