@@ -1,0 +1,8 @@
+{
+  "scenario": "database outage",
+  "input": {
+    "incident_summary": "payment-api database connection pool timeout and query deadlocks",
+    "top_events": [["Database timeout", 70, "ERROR"], ["Connection pool exhausted", 40, "CRITICAL"]]
+  },
+  "expected_category": "database"
+}

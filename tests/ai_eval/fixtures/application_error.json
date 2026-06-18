@@ -1,0 +1,8 @@
+{
+  "scenario": "application logic error",
+  "input": {
+    "incident_summary": "checkout-service unhandled exception null reference in order workflow",
+    "top_events": [["Unhandled exception", 45, "ERROR"], ["Null reference", 30, "ERROR"]]
+  },
+  "expected_category": "application"
+}

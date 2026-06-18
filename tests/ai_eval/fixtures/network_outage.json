@@ -1,0 +1,8 @@
+{
+  "scenario": "network / dependency failure",
+  "input": {
+    "incident_summary": "gateway dns resolution errors and connection refused to upstream dependency",
+    "top_events": [["Connection refused", 90, "ERROR"], ["DNS lookup failed", 50, "ERROR"]]
+  },
+  "expected_category": "network"
+}

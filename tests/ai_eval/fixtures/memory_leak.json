@@ -1,0 +1,8 @@
+{
+  "scenario": "memory leak / OOM",
+  "input": {
+    "incident_summary": "worker host rising memory usage ending in oom kills and heap exhaustion",
+    "top_events": [["OOM killed", 15, "CRITICAL"], ["High memory usage", 60, "WARNING"]]
+  },
+  "expected_category": "infrastructure"
+}
