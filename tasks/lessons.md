@@ -15,6 +15,11 @@
 
 ## Lessons
 
+### 2026-06-18 — Elapsed time must be (now − start), never a sum of phase estimates
+**Context**: Reporting cumulative elapsed time toward the 4–6h MVP target at the end of each phase.
+**Issue**: Reported "≈ 1h 55m" cumulative when only ~1h 29m of wall-clock had passed since the 1:35 PM IST start. Recurring error (also happened in Phase 1). Root cause: I summed per-phase deltas (each rounded up and inflated by thinking/tool time), so the total exceeded real wall-clock — which is impossible.
+**Fix/Insight**: Cumulative elapsed is ALWAYS a single subtraction: `current UTC − start UTC`. Get both authoritatively: start = first real prompt in `docs/prompts.md` (`2026-06-18T08:04:59Z` = 1:35 PM IST; ignore the earlier `bootstrap` entry), current = `date -u`. Never add rounded per-phase numbers to get a cumulative. A per-phase figure may be `(this phase's prompt ts) − (previous phase's prompt ts)`, but the cumulative is the one subtraction from start. Sanity check: cumulative can never exceed `now − start`. Promoted to `.cursor/rules/andela-time-tracking.mdc`.
+
 ### 2026-06-18 — GitHub identity is samit9495
 **Context**: Working on the Agentic Observability Platform; anything that ends up on GitHub (commits, pushes, PRs, releases, `gh` operations) must be attributed correctly.
 **Issue**: The author/owner identity for GitHub operations was not recorded anywhere, risking commits or PRs under the wrong account.

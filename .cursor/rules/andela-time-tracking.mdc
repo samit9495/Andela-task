@@ -1,0 +1,38 @@
+---
+description: How to compute and report elapsed time for the Andela MVP timer
+alwaysApply: true
+---
+
+# Andela Time Tracking
+
+The user tracks progress against a 4–6h MVP target (16h ceiling) and asks for an
+"Elapsed Time" report. Get this right — it has been reported wrong twice.
+
+## The one rule
+
+**Cumulative elapsed = `current UTC − start UTC`. One subtraction. Always.**
+
+- **start UTC** = the first real working prompt in `docs/prompts.md`:
+  `2026-06-18T08:04:59Z` (= 1:35 PM IST). Ignore the earlier `bootstrap` entry.
+- **current UTC** = run `date -u +"%Y-%m-%dT%H:%M:%SZ"`.
+
+Both timestamps are authoritative. `docs/prompts.md` is appended automatically by
+the `beforeSubmitPrompt` hook, so it is the source of truth for prompt times.
+
+## Never do this
+
+- ❌ Do **not** sum per-phase estimates to produce a cumulative. Rounding and
+  thinking/tool overhead inflate each phase, so the sum exceeds wall-clock —
+  which is impossible.
+- ❌ Do **not** eyeball or estimate from memory.
+
+## Per-phase figure (optional)
+
+A single phase's duration may be `(this phase's prompt ts) − (previous phase's
+prompt ts)`, both from `docs/prompts.md`. But the **cumulative** is still only the
+single subtraction from `start`.
+
+## Sanity check before reporting
+
+`cumulative ≤ (now − start)` must hold. If your number is larger, it is wrong —
+recompute with the single subtraction.
