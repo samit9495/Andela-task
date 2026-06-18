@@ -27,7 +27,9 @@ Andela-task/
 ├── AGENTS.md             # this file
 ├── README.md             # public-facing setup, run, test instructions
 ├── Requirement_doc.md    # the spec
-├── prompts.md            # complete history of LLM prompts (assessment requirement)
+├── prompts.md            # symlink -> docs/prompts.md (audit log of all instructions; assessment requirement)
+├── docs/prompts.md       # human-instruction audit log, written by the beforeSubmitPrompt hook
+├── docs/llm_prompts.md   # runtime Gemini prompt history, written by prompt_log.py
 ├── docker-compose.yml
 ├── tasks/                # todo, lessons, manual-test-scenarios
 ├── docs/                 # design notes, ADRs, AI evaluations, security reviews
@@ -49,7 +51,7 @@ For the full anatomy with one-line responsibilities, read [`.cursor/rules/andela
 2. **TDD is non-negotiable.** Read [`.cursor/rules/andela-tdd-discipline.mdc`](.cursor/rules/andela-tdd-discipline.mdc) and follow [`.cursor/skills/andela-tdd-loop/SKILL.md`](.cursor/skills/andela-tdd-loop/SKILL.md).
 3. **Every commit follows Conventional Commits** ([`.cursor/rules/andela-commit-hygiene.mdc`](.cursor/rules/andela-commit-hygiene.mdc)). One TDD step per commit.
 4. **Track work** in [`tasks/todo.md`](tasks/todo.md). Capture lessons in [`tasks/lessons.md`](tasks/lessons.md).
-5. **Every LLM prompt that ships gets logged to [`prompts.md`](prompts.md)** — this is an assessment requirement.
+5. **Prompt auditability is automatic.** Every instruction you type is appended to [`docs/prompts.md`](docs/prompts.md) by the `beforeSubmitPrompt` Cursor hook (root [`prompts.md`](prompts.md) symlinks to it). Runtime Gemini prompts are logged separately to `docs/llm_prompts.md` by `prompt_log.py`. Both satisfy the assessment requirement.
 
 ## AI agents available (for Cursor's Task tool)
 

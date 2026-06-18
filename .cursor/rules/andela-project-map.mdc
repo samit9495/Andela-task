@@ -12,13 +12,15 @@ alwaysApply: false
 
 ```
 Andela-task/
-├── .cursor/                  # Cursor rules, skills, agents, mcp.json
+├── .cursor/                  # Cursor rules, skills, agents, hooks, mcp.json
 ├── AGENTS.md                 # short project overview for human + agent readers
 ├── README.md                 # public-facing setup, run, test instructions
-├── prompts.md                # complete history of LLM prompts (assessment requirement)
+├── prompts.md                # symlink -> docs/prompts.md (acceptance requirement)
 ├── docker-compose.yml        # backend + frontend + SQLite volume
 ├── tasks/                    # todo, lessons, manual test scenarios
 ├── docs/                     # design notes, ADRs
+│   ├── prompts.md            # audit log of every human instruction to the AI agent (hook-written)
+│   └── llm_prompts.md        # complete history of runtime Gemini prompts (prompt_log.py)
 ├── deck/                     # presentation slides
 ├── backend/                  # FastAPI backend (Python)
 ├── frontend/                 # React + Vite UI
@@ -31,6 +33,17 @@ Andela-task/
 ├── pyproject.toml            # Python project metadata + deps
 └── .gitignore
 ```
+
+## Prompt auditability — two distinct logs
+
+The platform keeps **two** separate prompt records. Do not merge them.
+
+| File | Written by | Contains |
+|------|-----------|----------|
+| `docs/prompts.md` (root `prompts.md` is a symlink to it) | `.cursor/hooks/log-prompt.sh` via the `beforeSubmitPrompt` hook | Every **human instruction** typed to the AI coding agent. This is the "full audit log of all instructions" the acceptance criteria asks for. Appended automatically on every prompt. |
+| `docs/llm_prompts.md` | `backend/app/triage/prompt_log.py` | Every **runtime Gemini prompt** issued by the triage agents, with response and token metrics. |
+
+The hook is registered in `.cursor/hooks.json`. It fails open: a logging error never blocks a prompt. Secrets are redacted before they reach the log.
 
 ## Backend (`backend/app/`)
 
@@ -60,7 +73,7 @@ Andela-task/
 | `app/triage/agents/` | Classification, root cause, remediation, executive summary |
 | `app/triage/llm_client.py` | `LLMClient` protocol + Gemini (google-genai) implementation |
 | `app/triage/prompts.py` | Versioned prompt templates |
-| `app/triage/prompt_log.py` | Persists every prompt to `llm_evaluations` and appends to `prompts.md` |
+| `app/triage/prompt_log.py` | Persists every runtime Gemini prompt to `llm_evaluations` and appends to `docs/llm_prompts.md` |
 | `app/rag/` | Runbook loader, embedder, retriever |
 | `app/alerts/channels/` | Dashboard, webhook, email_sim, slack_sim |
 | `app/risk/risk_score_service.py` | Risk score calculation |

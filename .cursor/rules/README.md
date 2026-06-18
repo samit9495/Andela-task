@@ -11,7 +11,9 @@ Project-specific rules for the **Agentic Observability Platform** (the Andela as
 | [`../mcp.json`](../mcp.json) | MCP server configuration (Filesystem, Git, GitHub, Context7, Docker, Browser) |
 | [`../../AGENTS.md`](../../AGENTS.md) | Project overview, stack, agent roles |
 | [`../../tasks/lessons.md`](../../tasks/lessons.md) | Team **lessons learned** (promote stable items into rules/skills) |
-| [`../../prompts.md`](../../prompts.md) | Required prompt history (Req. doc Section 15) |
+| [`../../docs/prompts.md`](../../docs/prompts.md) | Audit log of every human instruction — written automatically by the `beforeSubmitPrompt` hook (root `prompts.md` symlinks here). Satisfies Req. doc Section 15. |
+| [`../../docs/llm_prompts.md`](../../docs/llm_prompts.md) | Runtime Gemini prompt history written by `prompt_log.py` |
+| [`../hooks.json`](../hooks.json) + [`../hooks/log-prompt.sh`](../hooks/log-prompt.sh) | The prompt-audit hook that appends each instruction to `docs/prompts.md` |
 
 ## Always-Apply Rules (read first, top-to-bottom)
 
@@ -36,7 +38,7 @@ Project-specific rules for the **Agentic Observability Platform** (the Andela as
 
 | Rule | Purpose |
 |------|---------|
-| **andela-agentic-ai** | LLMClient protocol, structured outputs, the 4-agent triage workflow, mandatory `prompts.md` logging, determinism, cost guards |
+| **andela-agentic-ai** | LLMClient protocol, structured outputs, the 4-agent triage workflow, mandatory `docs/llm_prompts.md` logging, determinism, cost guards |
 | **andela-detection-engine** | Z-Score / EWMA / signature frequency / severity drift; NumPy; deterministic; no magic thresholds |
 | **andela-rag** | Runbook loader → embedder → retriever → injection; mandatory citations; deterministic ordering |
 | **andela-sdk** | `watchdog_client` SDK design: typed, semver, no business logic, decoupled from backend |

@@ -119,13 +119,16 @@ Before looping back, ask whether the commit(s) you just made should update any o
 |-----------------------|------------------|
 | A design decision picked among real alternatives | `docs/tradeoffs.md` |
 | A perf measurement, or any `perf:` commit | `docs/performance.md` |
-| **Any LLM prompt that shipped or changed** | **`prompts.md` (mandatory — Req. doc Section 15)** |
+| **Any LLM prompt that shipped or changed** | **`docs/llm_prompts.md` (mandatory — Req. doc Section 15)** |
 | A new agent, detector, or runbook | Update `andela-project-map.mdc` |
+
+> Human instructions are logged automatically to `docs/prompts.md` by the
+> `beforeSubmitPrompt` hook — no manual step needed for that file.
 
 If yes, append the entry and commit:
 
 ```bash
-git add prompts.md docs/
+git add docs/
 git commit -m "docs(prompts): record classification agent v1 prompt"
 ```
 

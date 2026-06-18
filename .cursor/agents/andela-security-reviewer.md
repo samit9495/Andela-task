@@ -45,7 +45,7 @@ For agent / RAG changes, ask explicitly:
 - **Tool / function calls**: does the LLM have any `function_call` or tool access? Default for this project is **no**. If the diff adds it, escalate.
 - **Cost & rate**: can a malicious caller cause unbounded LLM spend? `max_tokens` per call + per-incident token budget + rate limit on `/api/v1/events` are required.
 - **Determinism**: `temperature=0.0`. Any deviation needs a documented reason.
-- **Prompt logging**: does `prompts.md` capture the new/changed prompt? Without this, the assessment fails.
+- **Prompt logging**: does `docs/llm_prompts.md` capture the new/changed Gemini prompt? Without this, the assessment fails.
 
 ### Phase 4 — Report
 
@@ -119,7 +119,7 @@ Save to `docs/security-review-YYYY-MM-DD-<branch>.md`. Append a one-line summary
 - A prompt template that uses an f-string with user input.
 - `GEMINI_API_KEY = "..."` literal in `config.py` or any committed file.
 - A 100 MB log payload accepted because there's no size limit.
-- A new agent shipping without a `prompts.md` update.
+- A new agent shipping without a `docs/llm_prompts.md` update.
 - An MCP server in `.cursor/mcp.json` with a literal token.
 
 ## Source rules referenced

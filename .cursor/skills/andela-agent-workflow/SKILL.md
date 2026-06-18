@@ -1,6 +1,6 @@
 ---
 name: andela-agent-workflow
-description: Scaffold a triage agent test-first — Pydantic structured output, prompt template, prompt logging to prompts.md and llm_evaluations, deterministic fallback. Use when adding or modifying any of the 4 triage agents.
+description: Scaffold a triage agent test-first — Pydantic structured output, prompt template, prompt logging to docs/llm_prompts.md and llm_evaluations, deterministic fallback. Use when adding or modifying any of the 4 triage agents.
 ---
 
 # Andela Agent Workflow
@@ -20,7 +20,7 @@ Classification ─► RootCause ─► Remediation (with RAG) ─► ExecutiveSu
 Each agent must:
 
 - Return a **Pydantic structured output**, never free-form text.
-- Log its prompt + response via `prompt_log.record(...)` (writes to `prompts.md` AND the `llm_evaluations` table).
+- Log its prompt + response via `prompt_log.record(...)` (writes to `docs/llm_prompts.md` AND the `llm_evaluations` table).
 - Have a **deterministic fallback** when the LLM fails.
 - Use a **versioned prompt template** from `backend/app/triage/prompts.py`.
 
@@ -166,11 +166,15 @@ git add backend/app/triage/agents/classification_agent.py backend/app/triage/pro
 git commit -m "feat: implement Classification Agent with structured output and fallback"
 ```
 
-## Step 6 — Update prompts.md (mandatory)
+## Step 6 — Update docs/llm_prompts.md (mandatory)
+
+> `docs/llm_prompts.md` is the **runtime Gemini** prompt history. Do not confuse it
+> with `docs/prompts.md`, which auto-logs every human instruction via the
+> `beforeSubmitPrompt` hook and needs no manual edits.
 
 ```bash
-# Append the new prompt to prompts.md
-cat >> prompts.md <<'EOF'
+# Append the new prompt to docs/llm_prompts.md
+cat >> docs/llm_prompts.md <<'EOF'
 
 ## Classification Agent v1
 **Status**: shipping
@@ -181,7 +185,7 @@ cat >> prompts.md <<'EOF'
 **Rationale**: <why this prompt works, what alternatives were considered>
 EOF
 
-git add prompts.md
+git add docs/llm_prompts.md
 git commit -m "docs(prompts): record Classification Agent v1 prompt"
 ```
 
@@ -204,7 +208,7 @@ class TestClassificationAccuracy:
 
 - `genai.Client()` instantiated inside the agent. Always go through `LLMClient`.
 - `f"... {user_input} ..."` in a prompt template. Use `str.format` and sanitize.
-- Skipping the `prompt_log.record(...)` call. The assessment fails without `prompts.md`.
+- Skipping the `prompt_log.record(...)` call. The assessment fails without `docs/llm_prompts.md`.
 - Catching `Exception` and returning a partially-built output. Fall back to a documented default.
 - A new agent without a unit test AND an AI evaluation fixture.
 
@@ -217,7 +221,7 @@ class TestClassificationAccuracy:
 - [ ] Deterministic fallback when LLM fails
 - [ ] Unit test (with `FakeLLMClient`) covers happy + failure paths
 - [ ] AI evaluation fixture added
-- [ ] `prompts.md` updated and committed
+- [ ] `docs/llm_prompts.md` updated and committed
 
 ## See also
 

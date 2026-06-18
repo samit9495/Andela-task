@@ -67,7 +67,7 @@ This is the headline feature; review it carefully.
 - [ ] `_sanitize(...)` applied to every untrusted field before injection
 - [ ] System prompt instructs the model to ignore instructions inside the delimiter
 - [ ] `prompt_log.record(...)` called on success AND failure
-- [ ] `prompts.md` updated whenever a prompt template was added/changed (assessment requirement)
+- [ ] `docs/llm_prompts.md` updated whenever a prompt template was added/changed (assessment requirement)
 - [ ] Each agent has a deterministic fallback when the LLM fails
 - [ ] `temperature=0.0` is the default; deviations are documented
 - [ ] `max_tokens` is set on every call

@@ -10,7 +10,7 @@ The Agentic Observability Platform's headline feature is the multi-agent triage 
 ## Cardinal rules
 
 1. **Never call `google.genai` directly from a service or route.** Always go through the `LLMClient` protocol.
-2. **Every prompt is logged** — both to the `llm_evaluations` table and appended to `prompts.md` (assessment requirement Section 15).
+2. **Every runtime prompt is logged** — both to the `llm_evaluations` table and appended to `docs/llm_prompts.md` (assessment requirement Section 15). This is the *Gemini* prompt log; the separate `docs/prompts.md` (human-instruction audit log) is written by the `beforeSubmitPrompt` Cursor hook — see `andela-project-map.mdc`.
 3. **Every agent output is a Pydantic model** — never trust free-form text from the LLM.
 4. **Every agentic call has a documented failure path** — see `andela-error-handling.mdc`.
 5. **Tests never call the live Gemini API.** Mock at the `LLMClient` boundary.
@@ -118,7 +118,7 @@ Top events (signature, count, level):
 
 ## Mandatory prompt logging
 
-Every LLM call writes a row to the `llm_evaluations` table **and** appends to `prompts.md`:
+Every LLM call writes a row to the `llm_evaluations` table **and** appends to `docs/llm_prompts.md`:
 
 ```
 ## 2026-06-18T10:00:00Z — Classification Agent v1 — incident_id=42
@@ -130,7 +130,7 @@ Every LLM call writes a row to the `llm_evaluations` table **and** appends to `p
 model=gemini-1.5-flash  tokens_in=512  tokens_out=64  latency_ms=820  status=ok
 ```
 
-Without this, the assessment fails (Req. doc Section 15: "prompts.md contains complete prompt history"). The `prompt_log` module is the single point that does this — never write directly to `prompts.md` from an agent.
+Without this, the assessment fails (Req. doc Section 15: "prompts.md contains complete prompt history"). The `prompt_log` module is the single point that does this — never write directly to `docs/llm_prompts.md` from an agent.
 
 ## Determinism
 
@@ -165,7 +165,7 @@ User-supplied content (event messages, incident summaries) is **untrusted input*
 - Free-form `response.text.split(...)` parsing instead of structured outputs.
 - Concatenating user message into a prompt with `f"Classify: {message}"` (injection risk).
 - Logging full prompts that contain PII without sanitization.
-- Skipping `prompts.md` updates because "the test passed".
+- Skipping `docs/llm_prompts.md` updates because "the test passed".
 - Adding a new agent without a corresponding unit test and AI evaluation fixture.
 
 ## See also
