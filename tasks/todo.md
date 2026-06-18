@@ -13,6 +13,15 @@
 
 ## Completed
 
+### 2026-06-18 — Phase 6: Hardening, Docker, CI/CD, Evaluation, Documentation
+- [x] Security: BodySizeLimitMiddleware (413) + CORS allowlist wired from config; bound previously-ignored WATCHDOG_REQUEST_BODY_MAX_BYTES — TDD
+- [x] AI eval: classification→root-cause pipeline accuracy test + per-fixture root-cause keywords + deterministic scorecard generator (artifacts/ai_evaluations.md, gitignored)
+- [x] Docker: nginx reverse-proxy config, multi-stage frontend image, compose enables frontend with healthchecks + service_healthy dependency, backend HEALTHCHECK; runs with no secrets (mock AI default)
+- [x] CI: lint/type/test over backend+tests+sdk+scripts with 90% coverage floor; dedicated ai-eval, frontend build+Vitest, and pip-audit jobs
+- [x] Docs: full README rewrite (architecture, API, SDK, Docker, security) + 11-slide Marp deck under deck/
+- **Status**: done
+- **Summary**: 230 backend tests green (~99% coverage), 3 frontend tests green; ruff/black/mypy clean; docker compose config validated and frontend prod build verified (Docker daemon unavailable for image build). MASTER_PLAN M6 + doc Section 15 acceptance all checked.
+
 ### 2026-06-18 — Phase 5: SDK + Synthetic Traffic Generator
 - [x] watchdog_client SDK: 6 typed methods (create_event/create_batch/get_incidents/get_incident/get_risk_score/get_alerts), Pydantic models mirroring backend, no backend imports — TDD with respx
 - [x] SDK error handling: WatchdogAPIError (4xx/5xx + code), WatchdogTimeout (idempotent GET retries), WatchdogValidationError; API-key header; context manager

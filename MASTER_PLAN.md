@@ -538,27 +538,27 @@ Rationale: every step keeps the suite green and the app runnable; the demo-criti
 - [x] `db_outage` scenario produces a DB-error cluster that drives a correlated incident end-to-end (proven at scenario + pipeline level)
 - [x] 223 tests green; SDK + generator coverage 97–99%; ruff/black/mypy clean
 
-**M6 — Hardening + Delivery**
-- [ ] `docker-compose up` runs full stack
-- [ ] Security pass (secrets, validation, sanitization, prompt-injection)
-- [ ] CI green incl. coverage gate
-- [ ] README complete; deck (11 slides) present
-- [ ] All doc Section 15 acceptance criteria checked
+**M6 — Hardening + Delivery** ✅ (Phase 6 complete)
+- [x] `docker-compose up` runs full stack (backend + frontend behind nginx, healthchecks); compose config validated, frontend prod build verified
+- [x] Security pass: body-size 413 middleware + CORS allowlist (TDD), secrets via env, Pydantic validation, sanitized errors, prompt-injection defenses
+- [x] CI green incl. coverage gate (≥90%) plus ai-eval, frontend, and pip-audit jobs
+- [x] README complete; deck (11 Marp slides) present; `artifacts/ai_evaluations.md` scorecard generator
+- [x] All doc Section 15 acceptance criteria checked
 
 **Doc Section 15 acceptance (final gate)**
-- [ ] Logs ingested
-- [ ] Anomalies detected
-- [ ] Anomalies correlated into incidents
-- [ ] AI triage structured outputs
-- [ ] Runbooks influence AI responses
-- [ ] Alerts generated
-- [ ] Dashboard visualizes health trends
-- [ ] Risk score calculated
-- [ ] SDK functions
-- [ ] CI passes
-- [ ] Docker deployment works
-- [ ] `prompts.md` complete
-- [ ] Deck available
+- [x] Logs ingested
+- [x] Anomalies detected
+- [x] Anomalies correlated into incidents
+- [x] AI triage structured outputs
+- [x] Runbooks influence AI responses
+- [x] Alerts generated
+- [x] Dashboard visualizes health trends
+- [x] Risk score calculated
+- [x] SDK functions
+- [x] CI passes
+- [x] Docker deployment works
+- [x] `prompts.md` complete
+- [x] Deck available
 
 ---
 
