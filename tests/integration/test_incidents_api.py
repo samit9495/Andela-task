@@ -85,17 +85,17 @@ class TestPatchIncidentStatus:
         assert body["status"] == IncidentStatus.RESOLVED.value
         assert body["resolved_at"] is not None
 
-    def test_acknowledge_does_not_set_resolved_at(self, client, db):
+    def test_intermediate_status_does_not_set_resolved_at(self, client, db):
         incident = _seed_incident(db)
 
         response = client.patch(
             f"/api/v1/incidents/{incident.id}",
-            json={"status": IncidentStatus.ACKNOWLEDGED.value},
+            json={"status": IncidentStatus.INVESTIGATING.value},
         )
 
         assert response.status_code == 200
         body = response.json()
-        assert body["status"] == IncidentStatus.ACKNOWLEDGED.value
+        assert body["status"] == IncidentStatus.INVESTIGATING.value
         assert body["resolved_at"] is None
 
     def test_patch_unknown_returns_404(self, client):
@@ -109,8 +109,6 @@ class TestPatchIncidentStatus:
     def test_invalid_status_returns_422(self, client, db):
         incident = _seed_incident(db)
 
-        response = client.patch(
-            f"/api/v1/incidents/{incident.id}", json={"status": "bogus"}
-        )
+        response = client.patch(f"/api/v1/incidents/{incident.id}", json={"status": "bogus"})
 
         assert response.status_code == 422

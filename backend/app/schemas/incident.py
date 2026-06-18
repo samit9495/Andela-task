@@ -29,6 +29,14 @@ class AnomalyRead(BaseModel):
     created_at: datetime
 
 
+class IncidentStatusUpdate(BaseModel):
+    """Body for ``PATCH /api/v1/incidents/{id}`` status transitions."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: IncidentStatus
+
+
 class IncidentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

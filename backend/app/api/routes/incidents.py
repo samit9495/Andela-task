@@ -1,5 +1,6 @@
-"""Incident query endpoints."""
+"""Incident query and lifecycle endpoints."""
 
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
@@ -7,7 +8,7 @@ from fastapi import APIRouter, Depends, Path, Query
 from backend.app.api.deps import get_incident_service
 from backend.app.incidents.incident_service import IncidentService
 from backend.app.models.enums import IncidentStatus, Severity
-from backend.app.schemas.incident import IncidentRead
+from backend.app.schemas.incident import IncidentRead, IncidentStatusUpdate
 
 router = APIRouter(prefix="/api/v1/incidents", tags=["incidents"])
 
@@ -30,3 +31,13 @@ def get_incident(
     service: IncidentService = Depends(get_incident_service),
 ) -> IncidentRead:
     return IncidentRead.model_validate(service.get(incident_id))
+
+
+@router.patch("/{incident_id}", response_model=IncidentRead)
+def update_incident_status(
+    incident_id: Annotated[int, Path(ge=1)],
+    payload: IncidentStatusUpdate,
+    service: IncidentService = Depends(get_incident_service),
+) -> IncidentRead:
+    incident = service.update_status(incident_id, payload.status, datetime.now(tz=UTC))
+    return IncidentRead.model_validate(incident)
