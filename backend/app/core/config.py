@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     llm_prompt_log_path: str = Field(default="docs/llm_prompts.md", alias="LLM_PROMPT_LOG_PATH")
     llm_max_tokens: int = Field(default=1024, alias="LLM_MAX_TOKENS")
 
+    # --- Alerts (see MASTER_PLAN Component 11) ---
+    alert_rate_limit_seconds: int = Field(default=300, alias="ALERT_RATE_LIMIT_SECONDS")
+
+    # --- Topology (see MASTER_PLAN Component 6) ---
+    topology_path: str = Field(default="data/topology.json", alias="TOPOLOGY_PATH")
+
     @property
     def ai_mode(self) -> str:
         """Return ``"gemini"`` only when a real key is set and mock is disabled."""

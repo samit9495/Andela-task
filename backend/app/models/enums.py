@@ -39,3 +39,19 @@ class IncidentCategory(str, Enum):
     INFRASTRUCTURE = "infrastructure"
     APPLICATION = "application"
     UNKNOWN = "unknown"
+
+
+class AlertChannel(str, Enum):
+    """Alert delivery channels (all simulated in this project)."""
+
+    DASHBOARD = "dashboard"
+    WEBHOOK = "webhook"
+    EMAIL = "email"
+    SLACK = "slack"
+
+
+class AlertStatus(str, Enum):
+    """Lifecycle of a fired alert."""
+
+    SENT = "SENT"
+    SUPPRESSED = "SUPPRESSED"
