@@ -8,22 +8,35 @@ services:
       - "8000:8000"
     environment:
       WATCHDOG_DATABASE_URL: sqlite:////data/watchdog.db
-      USE_MOCK_AI: "true"
-    env_file:
-      - .env
+      # Default to the offline heuristic AI so the stack runs with no secrets.
+      # Set USE_MOCK_AI=false and GEMINI_API_KEY=... to use live Gemini.
+      USE_MOCK_AI: "${USE_MOCK_AI:-true}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
     volumes:
       - watchdog-data:/data
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
 
-  # Frontend container is implemented in Phase 4. Enable once frontend/ exists:
-  # frontend:
-  #   build:
-  #     context: .
-  #     dockerfile: infra/Dockerfile.frontend
-  #   image: agentic-observability-frontend
-  #   ports:
-  #     - "5173:80"
-  #   depends_on:
-  #     - backend
+  frontend:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.frontend
+    image: agentic-observability-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   watchdog-data:

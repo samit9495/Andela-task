@@ -1,15 +1,18 @@
 # syntax=docker/dockerfile:1
-# Placeholder scaffold for the React dashboard container.
-# The frontend is implemented in Phase 4; this Dockerfile is wired into
-# docker-compose.yml (commented) and will be enabled when frontend/ exists.
+# Multi-stage build for the React dashboard, served by nginx with an
+# API reverse-proxy to the backend service.
 
 FROM node:20-slim AS build
 WORKDIR /app
+ENV CI=true
 COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm ci || true
+RUN npm ci
 COPY frontend ./
-RUN npm run build || true
+RUN npm run build
 
 FROM nginx:1.27-alpine AS runtime
+COPY infra/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost:80/ || exit 1
