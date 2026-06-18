@@ -12,7 +12,7 @@ from watchdog_client import (
     WatchdogClient,
     WatchdogTimeout,
 )
-from watchdog_client.models import AlertRead, EventRead, IncidentRead, RiskScore
+from watchdog_client.models import AlertRead, EventRead, HealthStatus, IncidentRead, RiskScore
 
 BASE = "http://test"
 _NOW = datetime(2026, 6, 18, 10, 0, 0, tzinfo=UTC)
@@ -220,6 +220,30 @@ def test_api_key_sent_as_header():
     WatchdogClient(base_url=BASE, api_key="secret-key").get_alerts()
 
     assert route.calls.last.request.headers["X-API-Key"] == "secret-key"
+
+
+@respx.mock
+def test_get_health_returns_typed():
+    respx.get(f"{BASE}/health").mock(
+        return_value=httpx.Response(
+            200, json={"status": "ok", "version": "0.1.0", "ai_mode": "mock"}
+        )
+    )
+
+    result = _client().get_health()
+
+    assert isinstance(result, HealthStatus)
+    assert result.status == "ok"
+    assert result.version == "0.1.0"
+    assert result.ai_mode == "mock"
+
+
+@respx.mock
+def test_get_health_raises_on_timeout():
+    respx.get(f"{BASE}/health").mock(side_effect=httpx.ConnectTimeout("slow"))
+
+    with pytest.raises(WatchdogTimeout):
+        _client().get_health()
 
 
 @respx.mock
