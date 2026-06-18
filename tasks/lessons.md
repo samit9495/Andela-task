@@ -15,6 +15,11 @@
 
 ## Lessons
 
+### 2026-06-18 — CI `pip-audit` is a no-op without the project installed
+**Context**: Security review of the post-remediation `main` branch.
+**Issue**: `.github/workflows/ci.yml` `security` job installs only `pip-audit`, then runs it — but the project (and thus `fastapi`, `starlette`, etc.) is never installed in that job. `pip-audit` only sees its own deps, so the 7 starlette CVEs in `pyproject.toml` would never have surfaced in CI.
+**Fix/Insight**: Any future `pip-audit` / `safety` CI job MUST install the project first (`pip install -e ".[dev]"`) or it's cosmetic. Generally: for any "scanner" CI step, verify it actually has eyes on the artifact you think it does — run it locally on the same artifact and compare counts.
+
 ### 2026-06-18 — "Now" must come from `date -u` at report time, not the `<timestamp>` tag
 **Context**: Reporting cumulative elapsed time at the end of Phase 6.
 **Issue**: Reported "now 3:56 PM IST" from the turn's `<timestamp>` tag, but the real time was ~4:11 PM. The tag is captured when the user hits *send*, before the turn runs; a long turn (tools/edits/tests) makes it stale by 10–15 min. The previous fix correctly banned *estimating* time but still allowed the (stale) `<timestamp>` tag as the preferred source — that was the remaining bug.

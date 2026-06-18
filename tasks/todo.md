@@ -13,6 +13,16 @@
 
 ## Completed
 
+### 2026-06-18 — Security review of post-remediation main (`andela-security-reviewer`)
+- [x] Phase 1 surface enumeration (diff vs `2c9f041` + full-tree sweep)
+- [x] Phase 2 seven-area sweep (secrets / input validation / size limits / error sanitization / SQL / prompt injection / PII)
+- [x] Phase 3 LLM threat model (injection, exfil, tool calls, cost, determinism, prompt logging)
+- [x] Bonus: `pip-audit`, MCP / docker-compose / Dockerfile / GH Actions hardening
+- [x] `docs/security-review-2026-06-18-main.md` written with findings + verdict
+- [x] Lesson captured for the no-op `pip-audit` CI job
+- **Status**: done
+- **Summary**: 0 Critical / 0 High / 4 Medium / 2 Low / 3 Info. Verdict: **safe to merge**. Medium items are hardening (rate-limit `/api/v1/events`, bump starlette past 7 CVEs, install project in CI before `pip-audit`, sanitize Gemini error detail) — tracked for follow-up before any public-internet exposure.
+
 ### 2026-06-18 — Repository review remediation (C1, W1-W6, W9)
 - [x] C1: Translate google.genai APIError -> domain exceptions (LLMRateLimited / new LLMAuthError / LLMResponseInvalid / LLMTimeout); broaden _LLM_FAILURES; auth raises without retry; new handler mappings in main.py — TDD
 - [x] W1: Sanitize event signatures in format_top_events and runbook title/excerpt in RemediationAgent._runbook_block — TDD with FakeLLMClient prompt capture

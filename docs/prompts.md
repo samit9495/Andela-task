@@ -509,3 +509,19 @@ Implement the plan as specified, it is attached for your reference. Do NOT edit 
 
 To-do's from the plan have already been created. Do not create them again. Mark them as in_progress as you work, starting with the first one. Don't stop until you have completed all the to-dos.
 ```
+
+## 2026-06-18T11:22:28Z - conversation `4a10cd76-b595-4bb8-8f6d-e7043a7f537e` - mode `agent`
+
+**Attachments:** `andela-testing.mdc`, `andela-error-handling.mdc`, `andela-commit-hygiene.mdc`, `andela-craftsmanship.mdc`, `ai-standards.mdc`, `ai-shortcuts.mdc`, `andela-security.mdc`, `andela-tdd-discipline.mdc`, `andela-code-quality.mdc`, `andela-fastapi-core.mdc`, `andela-agentic-ai.mdc`, `ai-workflow.mdc`, `AGENTS.md`, `andela-time-tracking.mdc`
+
+```text
+use @.cursor/agents/andela-qa-automation.md on this branch.
+```
+
+## 2026-06-18T11:30:03Z - conversation `4a10cd76-b595-4bb8-8f6d-e7043a7f537e` - mode `agent`
+
+**Attachments:** `andela-testing.mdc`, `andela-error-handling.mdc`, `andela-commit-hygiene.mdc`, `andela-craftsmanship.mdc`, `ai-standards.mdc`, `ai-shortcuts.mdc`, `andela-security.mdc`, `andela-tdd-discipline.mdc`, `andela-code-quality.mdc`, `andela-fastapi-core.mdc`, `andela-agentic-ai.mdc`, `ai-workflow.mdc`, `AGENTS.md`, `andela-time-tracking.mdc`
+
+```text
+use @.cursor/agents/andela-security-reviewer.md on this branch.
+```
