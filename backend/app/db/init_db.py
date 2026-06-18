@@ -5,6 +5,7 @@ This is intentionally not a migration system; per the project scope we use
 tables are registered on ``Base.metadata`` before ``create_all`` runs.
 """
 
+import backend.app.models  # noqa: F401  (registers ORM models on Base.metadata)
 from backend.app.db.base import Base
 from backend.app.db.session import engine
 

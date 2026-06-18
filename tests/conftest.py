@@ -11,6 +11,7 @@ os.environ["WATCHDOG_DATABASE_URL"] = "sqlite://"
 
 from collections.abc import Iterator  # noqa: E402
 
+import backend.app.models  # noqa: E402, F401  (registers ORM models on Base.metadata)
 import pytest  # noqa: E402
 from backend.app.db.base import Base  # noqa: E402
 from backend.app.db.session import get_db  # noqa: E402
