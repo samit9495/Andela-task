@@ -515,13 +515,14 @@ Rationale: every step keeps the suite green and the app runnable; the demo-criti
 - [x] Risk score computed + `/api/v1/risk-score`, clamped 0–100 with bands
 - [x] Coverage 98% (105 tests total); HTTP auto-trigger deferred to Phase 4 (pipeline)
 
-**M3 — Triage + RAG**
-- [ ] `LLMClient` protocol + Gemini impl + Fake/Mock
-- [ ] 4 agents produce structured outputs (+ exec summary)
-- [ ] RAG retrieves + cites a runbook into remediation
-- [ ] Every call logged to `llm_evaluations` + `docs/llm_prompts.md`
-- [ ] Agent failure falls back (confidence 0.0)
-- [ ] AI eval fixtures pass thresholds
+**M3 — Triage + RAG** ✅ (Phase 3 complete)
+- [x] `LLMClient` protocol + Gemini impl + `FakeLLMClient` + `MockAIClient`
+- [x] 4 agents produce structured Pydantic outputs (incl. exec summary)
+- [x] RAG (loader + HashingEmbedder + retriever) retrieves + cites a runbook into remediation
+- [x] Every call logged to `llm_evaluations` + `docs/llm_prompts.md` (via `prompt_log`)
+- [x] Agent failure falls back deterministically (confidence 0.0); triage never crashes
+- [x] AI eval fixtures pass thresholds (classification accuracy 100% ≥ 80%; remediation cites runbook)
+- [x] Coverage 99% (147 tests total); triage HTTP endpoint/DI wiring deferred to Phase 4
 
 **M4 — Alerts + Topology + Dashboard**
 - [ ] Incident raises simulated webhook alert (dedup + rate-limit)

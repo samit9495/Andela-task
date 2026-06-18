@@ -290,3 +290,52 @@ Before coding provide:
 - Tests
 - Acceptance criteria
 ```
+
+## 2026-06-18T09:09:10Z - conversation `4a10cd76-b595-4bb8-8f6d-e7043a7f537e` - mode `agent`
+
+**Attachments:** `andela-testing.mdc`, `andela-error-handling.mdc`, `andela-commit-hygiene.mdc`, `andela-craftsmanship.mdc`, `ai-standards.mdc`, `ai-shortcuts.mdc`, `andela-security.mdc`, `andela-tdd-discipline.mdc`, `andela-code-quality.mdc`, `andela-fastapi-core.mdc`, `andela-agentic-ai.mdc`, `ai-workflow.mdc`, `AGENTS.md`
+
+```text
+We are starting Phase 3 — Agentic Triage + RAG.
+
+Read MASTER_PLAN.md completely.
+
+Goal:
+Implement AI-assisted incident analysis using the architecture defined in the master plan.
+
+Requirements:
+
+Implement:
+
+- LLMClient protocol
+- Gemini implementation
+- FakeLLMClient
+- MockAIClient
+- Prompt logging
+- Classification Agent
+- Root Cause Agent
+- Remediation Agent
+- Executive Summary Agent
+- Triage Service
+- Runbook Loader
+- Retriever
+- llm_evaluations persistence
+
+All structured outputs must use Pydantic schemas.
+
+Every LLM interaction must be logged.
+
+No route or service may directly call Gemini.
+
+Only LLMClient may communicate with Gemini.
+
+Before coding provide:
+
+- Agent architecture
+- Prompt flow
+- Failure handling
+- Logging strategy
+- Files
+- Tests
+- Acceptance criteria
+```

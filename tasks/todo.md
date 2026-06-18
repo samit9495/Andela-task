@@ -13,6 +13,17 @@
 
 ## Completed
 
+### 2026-06-18 — Phase 3: Agentic Triage + RAG
+- [x] LLMClient protocol + FakeLLMClient (test double) + GeminiLLMClient (only google.genai importer) + MockAIClient (offline heuristic) — TDD
+- [x] LLMEvaluation ORM model + repository; PromptLog records every call to llm_evaluations + appends docs/llm_prompts.md — TDD
+- [x] RAG: RunbookLoader (YAML frontmatter), HashingEmbedder (deterministic BoW), RunbookRetriever (cosine top-k + floor + tie-break) + 5 seed runbooks — TDD
+- [x] StructuredAgent base (timing/logging/fallback DRY) + Classification/RootCause/Remediation/ExecutiveSummary agents; versioned prompts; sanitize (prompt-injection) — TDD
+- [x] TriageService orchestration: classify -> root cause -> RAG -> remediation (cites runbook) -> exec summary; persists category/root_cause/summary/confidence — TDD
+- [x] AI eval suite: 5 fixtures + classification accuracy (100% ≥ 80%) + remediation-cites-runbook (@ai_eval)
+- [x] fake_llm fixture; pyyaml + types-PyYAML deps; mypy override for google.genai
+- **Status**: done
+- **Summary**: 147 tests pass (incl. ai_eval), 99% coverage; ruff/black/mypy green. Only GeminiLLMClient touches google.genai; every agent output is a validated Pydantic schema; agents fall back deterministically (confidence 0.0) so triage never crashes. Triage HTTP endpoint + runtime DI provider deferred to Phase 4 (pipeline/dashboard), consistent with Phase 2.
+
 ### 2026-06-18 — Phase 2: Detection + Correlation + Incidents + Risk
 - [x] Detection constants in Settings (z-score/EWMA/signature/bucket/correlation) aliased to .env.example
 - [x] Detector protocol + AnomalySignal; Z-Score, EWMA, Signature-Frequency detectors (pure NumPy) — TDD
