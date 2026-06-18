@@ -32,9 +32,7 @@ class Settings(BaseSettings):
     database_url: str = Field(default="sqlite:///./var/watchdog.db", alias="WATCHDOG_DATABASE_URL")
 
     # --- Security ---
-    request_body_max_bytes: int = Field(
-        default=1_048_576, alias="WATCHDOG_REQUEST_BODY_MAX_BYTES"
-    )
+    request_body_max_bytes: int = Field(default=1_048_576, alias="WATCHDOG_REQUEST_BODY_MAX_BYTES")
     cors_allow_origins: str = Field(
         default="http://localhost:5173", alias="WATCHDOG_CORS_ALLOW_ORIGINS"
     )

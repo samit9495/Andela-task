@@ -8,7 +8,7 @@ on:
 
 jobs:
   quality:
-    name: Lint, type-check, test
+    name: Lint, type-check, fast tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,13 +25,80 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Ruff (lint)
-        run: ruff check backend tests
+        run: ruff check backend tests sdk scripts
 
       - name: Black (format check)
-        run: black --check backend tests
+        run: black --check backend tests sdk scripts
 
       - name: Mypy (type check)
         run: mypy
 
-      - name: Pytest (fast suite + coverage)
-        run: pytest -m "not ai_eval and not slow" --cov=backend/app --cov-report=term-missing
+      - name: Pytest (fast suite + coverage gate)
+        run: >-
+          pytest -m "not ai_eval and not slow"
+          --cov=backend/app --cov-report=term-missing --cov-fail-under=90
+
+  ai-eval:
+    name: AI evaluation suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Pytest (AI evaluation, offline)
+        run: pytest -m ai_eval -v
+
+  frontend:
+    name: Frontend tests and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Vitest (run once)
+        run: npm run test -- --run
+
+      - name: Production build
+        run: npm run build
+
+  security:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+
+      - name: Audit dependencies
+        run: pip-audit --progress-spinner=off
