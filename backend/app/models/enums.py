@@ -28,3 +28,14 @@ class IncidentStatus(str, Enum):
     INVESTIGATING = "INVESTIGATING"
     MITIGATED = "MITIGATED"
     RESOLVED = "RESOLVED"
+
+
+class IncidentCategory(str, Enum):
+    """AI-assigned incident category (Classification Agent)."""
+
+    DATABASE = "database"
+    AUTHENTICATION = "authentication"
+    NETWORK = "network"
+    INFRASTRUCTURE = "infrastructure"
+    APPLICATION = "application"
+    UNKNOWN = "unknown"

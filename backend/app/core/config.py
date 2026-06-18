@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     # --- Correlation (see MASTER_PLAN section 26.1) ---
     correlation_window_seconds: int = Field(default=300, alias="CORRELATION_WINDOW_SECONDS")
 
+    # --- Triage / RAG (see MASTER_PLAN sections 12-13) ---
+    runbook_dir: str = Field(default="data/runbooks", alias="RUNBOOK_DIR")
+    rag_top_k: int = Field(default=3, alias="RAG_TOP_K")
+    rag_min_similarity: float = Field(default=0.05, alias="RAG_MIN_SIMILARITY")
+    llm_prompt_log_path: str = Field(default="docs/llm_prompts.md", alias="LLM_PROMPT_LOG_PATH")
+    llm_max_tokens: int = Field(default=1024, alias="LLM_MAX_TOKENS")
+
     @property
     def ai_mode(self) -> str:
         """Return ``"gemini"`` only when a real key is set and mock is disabled."""

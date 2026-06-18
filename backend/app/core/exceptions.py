@@ -27,3 +27,7 @@ class LLMTimeout(DomainError):
 
 class LLMResponseInvalid(DomainError):
     """The LLM returned a response that failed structured-output validation."""
+
+
+class LLMRateLimited(DomainError):
+    """The LLM provider rejected the call due to rate limiting."""
