@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "watchdog-client"
+version = "0.1.0"
+description = "Typed Python SDK for the Agentic Observability Platform API."
+authors = [{ name = "Samit Pawar" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28,<0.29",
+    "pydantic>=2.10,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "respx==0.22.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["watchdog_client*"]

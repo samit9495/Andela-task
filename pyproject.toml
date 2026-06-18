@@ -31,6 +31,7 @@ dev = [
     "black==24.10.0",
     "mypy==1.14.1",
     "types-PyYAML==6.0.12.20260518",
+    "respx==0.22.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -78,7 +79,7 @@ module = ["google.*", "google.genai.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = [".", "sdk"]
 testpaths = ["tests", "sdk/tests"]
 addopts = "-ra"
 markers = [
