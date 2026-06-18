@@ -19,6 +19,7 @@ dependencies = [
     "numpy==2.2.1",
     "google-genai==0.8.0",
     "httpx==0.28.1",
+    "pyyaml==6.0.3",
 ]
 
 [project.optional-dependencies]
@@ -29,6 +30,7 @@ dev = [
     "ruff==0.8.6",
     "black==24.10.0",
     "mypy==1.14.1",
+    "types-PyYAML==6.0.12.20260518",
 ]
 
 [tool.setuptools.packages.find]
@@ -70,6 +72,10 @@ plugins = ["pydantic.mypy"]
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["google.*", "google.genai.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
