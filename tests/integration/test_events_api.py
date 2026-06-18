@@ -1,5 +1,8 @@
 """Integration tests for the events API."""
 
+from backend.app.api.deps import get_pipeline_service
+from backend.app.main import app
+
 
 def _payload(**overrides):
     base = {
@@ -105,3 +108,37 @@ class TestListEvents:
         page = client.get("/api/v1/events", params={"limit": 2, "offset": 2}).json()
 
         assert len(page) == 2
+
+
+class _ExplodingPipeline:
+    """Pipeline double that always blows up, simulating downstream failure."""
+
+    def process_services(self, services, *, now):  # type: ignore[no-untyped-def]
+        raise RuntimeError("simulated pipeline crash")
+
+
+class TestIngestionIsDecoupledFromPipeline:
+    def test_single_event_still_201_when_pipeline_raises(self, client, db):
+        app.dependency_overrides[get_pipeline_service] = lambda: _ExplodingPipeline()
+        try:
+            response = client.post("/api/v1/events", json=_payload())
+        finally:
+            app.dependency_overrides.pop(get_pipeline_service, None)
+
+        assert response.status_code == 201
+        # Event was persisted even though the pipeline raised.
+        listed = client.get("/api/v1/events").json()
+        assert len(listed) == 1
+
+    def test_batch_still_201_when_pipeline_raises(self, client, db):
+        app.dependency_overrides[get_pipeline_service] = lambda: _ExplodingPipeline()
+        try:
+            response = client.post(
+                "/api/v1/events/batch",
+                json={"events": [_payload(), _payload(message="other")]},
+            )
+        finally:
+            app.dependency_overrides.pop(get_pipeline_service, None)
+
+        assert response.status_code == 201
+        assert response.json()["created"] == 2
