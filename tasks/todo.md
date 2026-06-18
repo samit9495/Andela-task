@@ -13,7 +13,20 @@
 
 ## Completed
 
-<!-- Move completed entries here, most recent first. -->
+### 2026-06-18 — Phase 0: Project Skeleton & Tooling
+- [x] pyproject.toml (deps + ruff/black/mypy/pytest/coverage config)
+- [x] .dockerignore (kept existing comprehensive .gitignore and .env.example)
+- [x] Settings configuration loading (backend/app/core/config.py) — TDD
+- [x] Domain exception hierarchy (backend/app/core/exceptions.py) — TDD
+- [x] DB base, session, init_db (backend/app/db/) — TDD
+- [x] Logging config (backend/app/core/logging.py)
+- [x] App factory + lifespan + global exception handlers (backend/app/main.py) — TDD
+- [x] GET /health endpoint + HealthResponse schema — TDD
+- [x] tests/conftest.py fixtures (engine, db, client over in-memory SQLite)
+- [x] Docker scaffolding (infra/Dockerfile.backend, .frontend, docker-compose.yml)
+- [x] GitHub Actions CI (ruff→black→mypy→pytest)
+- **Status**: done
+- **Summary**: 21 tests pass, 100% coverage on backend/app; ruff/black/mypy all green. App boots and serves /health. No business logic (deferred to Phase 1+).
 
 ## Backlog
 
