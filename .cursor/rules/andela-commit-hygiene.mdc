@@ -1,0 +1,105 @@
+---
+description: Commit hygiene — small atomic commits, Conventional Commits format, every TDD step gets its own commit so git log tells the story.
+alwaysApply: true
+---
+
+# Andela Commit Hygiene
+
+The assessor reads `git log`. Make it readable.
+
+## GitHub identity
+
+- Anything pushed to GitHub (commits, pushes, pull requests, releases, `gh` operations) MUST be attributed to the GitHub account **`samit9495`**.
+- Do **not** modify the local `git config` to enforce this (see the Git Safety Protocol) — instead ensure the active remote, credentials, and `gh` auth target the `samit9495` account before pushing.
+
+## One logical change per commit
+
+A commit is the smallest unit of meaningful change. Never bundle:
+
+- A failing test AND its implementation.
+- An implementation AND a refactor.
+- A feature AND an unrelated bug fix.
+- Source changes AND a `.gitignore` tweak AND a README update.
+
+When in doubt: **stage less, commit more often**.
+
+## Conventional Commits
+
+Format: `<type>(<optional scope>): <imperative summary>`
+
+| Type | When to use |
+|------|-------------|
+| `test:` | A test was added or updated. The default commit type for the **RED** step. |
+| `feat:` | New observable behavior. The default commit type for the **GREEN** step of a new feature. |
+| `fix:` | Behavior was broken; this commit restores it. Pairs with a regression test commit. |
+| `refactor:` | Internal change. No new behavior, no test additions. All tests still green. |
+| `chore:` | Tooling, dependencies, dev-only files. |
+| `docs:` | README, AGENTS.md, prompts.md, comments. |
+| `perf:` | Behavior unchanged, measurably faster. Cite the benchmark in the body. |
+| `build:` | Build system, package manager changes (`pyproject.toml`, `package.json`, lockfiles, Dockerfile). |
+| `ci:` | CI workflow changes (`.github/workflows/`). |
+
+Use `!` after the type for a breaking change (`feat!:`).
+
+## TDD-mapped messages
+
+The agent should produce this pattern in `git log --oneline`:
+
+```
+abc1234 test: ingestion endpoint accepts a single log event
+def5678 feat: implement POST /api/v1/events for single event
+9abcde0 refactor: extract event normalization helper
+1234567 test: error rate spike detector flags z-score above threshold
+89abcde feat: implement error rate spike detector with z-score
+```
+
+Each commit either adds a failing test, makes it pass, or improves the code with the suite green.
+
+## Message body (optional, for non-trivial commits)
+
+```
+feat: implement error rate spike detector with z-score
+
+Computes errors-per-minute over a rolling window and compares to
+the baseline mean and stddev. Returns an Anomaly when the z-score
+exceeds ANOMALY_Z_SCORE_THRESHOLD. Threshold is configurable via
+settings.
+```
+
+Keep the subject line ≤ 72 characters. Imperative mood ("add", "implement", "extract"), not past tense.
+
+## Hard rules
+
+- **No commits to `main` (or `master`) that leave the suite red.** A failing test as a deliberate RED step is fine if and only if it is the only change in the commit and is followed by the corresponding GREEN commit.
+- **Never amend a commit that has been pushed** to a shared branch. Add a new commit instead.
+- **Never `--force` push** without explicit user instruction.
+- **Never commit secrets**, `.env` files, API keys (Gemini, GitHub, etc.), credentials, large binaries, or generated artifacts. The repository should be cloneable on a fresh machine and tests should pass.
+- **Never use `-i` (interactive) flags** with git.
+- **Never bypass hooks** with `--no-verify` unless the user explicitly requests it.
+
+## Before every commit
+
+1. `git diff --staged` and read every line you are about to commit.
+2. Run the tests for the changed area. Paste the output into the PR/chat.
+3. Confirm there are no debug prints, commented-out code, or `TODO: revert before merge` markers.
+4. Confirm no unrelated changes are staged. `git add -p` is your friend.
+5. Confirm no API keys, tokens, or `.env` contents are in the diff.
+
+## Squash vs no squash
+
+For the assessment: **do not squash**. The whole point is for the assessor to read the TDD evolution commit by commit.
+
+## Anti-examples (do not do)
+
+```
+abc1234 wip                                   <- meaningless
+def5678 fixed stuff                           <- not a sentence
+9abcde0 added detection and correlation       <- two features at once
+1234567 final final v2 reviewed               <- chronicling your editing process
+```
+
+## Cross-references
+
+- `andela-tdd-discipline.mdc` — the loop that produces these commits.
+- `.cursor/skills/andela-tdd-loop/SKILL.md` — exact step-by-step recipe with the commit calls.
+- `.cursor/agents/andela-code-reviewer.md` — the `git log` audit checklist.

@@ -1,0 +1,140 @@
+---
+description: RAG runbook engine — embed runbooks, retrieve by similarity, inject into the Remediation Agent, cite sources in the output
+globs: backend/app/rag/**/*.py,data/runbooks/**/*,tests/unit/test_rag_*.py
+alwaysApply: false
+---
+
+# Andela RAG (Runbook Retrieval)
+
+The triage pipeline retrieves operational runbooks and injects them into the Remediation Agent's prompt (Req. doc Component 9). Without RAG, remediations are generic; with RAG, they are grounded in the team's documented procedures.
+
+## Source of truth
+
+```
+data/runbooks/
+├── database_timeout.md
+├── memory_leak.md
+├── jwt_failure.md
+├── disk_full.md
+├── api_throttling.md
+├── auth_outage.md
+└── ...
+```
+
+Each runbook is a Markdown file with frontmatter:
+
+```markdown
+---
+title: Database Timeout
+category: database
+keywords: [timeout, connection, pool, exhaustion]
+version: 1
+---
+
+# Database Timeout
+
+## Symptoms
+- Errors with "Database timeout" or "connection refused"
+- Spike in latency on services depending on the database
+
+## Investigation
+1. ...
+
+## Remediation
+1. Increase connection pool size to ...
+2. ...
+```
+
+## Pipeline (Req. doc Component 9)
+
+```
+Runbook MD files
+       │
+       ▼
+  RunbookLoader  ──►  Runbook ORM rows (title, content, frontmatter)
+       │
+       ▼
+   Embedder      ──►  Vector per runbook stored in `runbook.embedding`
+       │
+       ▼
+   Retriever     ──►  Top-K runbooks for an incident summary
+       │
+       ▼
+Remediation Agent prompt (with runbook excerpts injected)
+       │
+       ▼
+IncidentReport.remediation.references = [runbook_id, ...]
+```
+
+## Embedding storage
+
+- For local execution (Req. doc Goal 11), embeddings live in SQLite as a serialized vector (e.g., `BLOB` of `numpy.float32` bytes, or JSON of floats). No external vector DB required.
+- A small local embedding model (e.g., `text-embedding-004` via google-genai, or a deterministic hash for offline tests) is fine.
+- For tests, use a **deterministic fake embedder** that maps a string to a fixed vector via hashing. Real embeddings are not used in unit tests.
+
+## Retrieval
+
+- Cosine similarity over the stored vectors.
+- Top-K configurable (default `K=3`).
+- A minimum-similarity floor (default `0.6`) — below it, return fewer results rather than irrelevant ones.
+- Ties broken by `runbook.version` desc, then `id` asc — deterministic.
+
+## Injection into the Remediation Agent
+
+```python
+runbook_excerpts = "\n\n".join(
+    f"### Runbook: {rb.title}\n{rb.content_excerpt}"
+    for rb in retrieved
+)
+
+prompt = REMEDIATION_PROMPT_V1.format(
+    incident_summary=incident.summary,
+    root_cause=root_cause.probable_cause,
+    runbook_excerpts=runbook_excerpts,
+)
+```
+
+## Citing sources (mandatory)
+
+The `Remediation` Pydantic model has a `references: list[RunbookReference]` field. The Executive Summary Agent's `IncidentReport.runbook_references` aggregates all cited runbooks. The AI Analysis page shows them with title + link.
+
+```python
+class RunbookReference(BaseModel):
+    runbook_id: int
+    title: str
+    similarity: float = Field(ge=0.0, le=1.0)
+```
+
+If the LLM produces a remediation that does not cite at least one retrieved runbook, log a warning — the grounding likely failed. Do not block the response, but flag it.
+
+## Determinism
+
+- Runbook loading is idempotent: re-running the loader on unchanged files produces the same rows.
+- The fake embedder used in tests is deterministic by string hash.
+- Retrieval ordering ties are broken deterministically (see above).
+
+## Sanitization
+
+- Runbooks are operator-authored and trusted, but treat retrieved content the same as any other LLM input: wrap in delimiters, do not allow it to override the system prompt.
+- Never embed user-supplied event messages into the runbook store.
+
+## Tests
+
+- `tests/unit/test_rag_loader.py` — frontmatter parsed, file changes detected, content excerpts truncated correctly.
+- `tests/unit/test_rag_retriever.py` — top-K, similarity floor, deterministic tie-breaks.
+- `tests/unit/test_remediation_agent_with_rag.py` — retrieved runbooks appear in the Remediation Agent's prompt; references in the output.
+- `tests/ai_eval/test_remediation_quality.py` — does the remediation actually use information from the retrieved runbook? Use a rubric, not exact match.
+
+## Anti-patterns
+
+- A runbook source that is a database table edited from the UI without going through the loader. Runbooks are versioned source-controlled MD files.
+- Calling `genai.Client().models.embed_content(...)` from inside the retriever. Go through an `Embedder` protocol so tests can swap it.
+- Returning runbooks below the similarity floor "to be helpful". Better to return fewer results.
+- Forgetting to refresh embeddings when a runbook MD file changes. The loader hashes content and re-embeds when the hash changes.
+
+## See also
+
+- `andela-agentic-ai.mdc` — the Remediation Agent that consumes RAG output.
+- `andela-error-handling.mdc` — RAG failures fall back to running the Remediation Agent without runbooks.
+- `andela-security.mdc` — runbook content is trusted but still wrapped in delimiters.
+- `.cursor/skills/andela-rag-runbooks/SKILL.md` — build/evaluate the RAG engine test-first.

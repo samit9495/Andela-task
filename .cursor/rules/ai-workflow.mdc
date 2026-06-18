@@ -1,0 +1,70 @@
+---
+description: Planning, task tracking, subagent strategy, autonomous debugging, and lessons
+alwaysApply: true
+---
+
+# AI Workflow
+
+## Planning
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately
+- Write detailed specs upfront to reduce ambiguity
+
+### Plan file location (workspace archive)
+
+Cursor's `CreatePlan` tool writes plans to the global path `~/.cursor/plans/<name>_<hash>.plan.md`, which is not tracked by git. Every plan that produces work in this repository MUST be archived locally:
+
+- **Folder**: `.cursor/plan/` (singular, workspace-relative).
+- **Filename**: `<plan-name>.plan.md` — kebab-case, drop the random hash suffix.
+- **When**: after the plan is approved (or once the work it describes is complete), copy the file from `~/.cursor/plans/` into `.cursor/plan/`.
+- **Frontmatter**: keep the `name` / `overview` / `todos` / `isProject` block intact; update `todos[*].status` to reflect the final outcome.
+- **Commit**: `docs(plan): archive <plan-name>` — one plan per commit.
+
+The folder ships with a [`.cursor/plan/README.md`](.cursor/plan/README.md) explaining the convention.
+
+## Subagents
+- Use subagents for parallel research/exploration; one focused task per subagent
+
+## Task Tracking — MANDATORY for every ticket/task
+
+### Session Start (do this FIRST before any code)
+1. **Read** `tasks/lessons.md` — avoid repeating past mistakes
+2. **Read** `tasks/todo.md` — check for carry-over work
+3. **Add entry** to `tasks/todo.md` under `## In Progress` with: date, ticket/title, checklist of sub-tasks
+
+### During Work
+- **Check off** sub-tasks in `tasks/todo.md` as each is completed
+- If scope changes or new sub-tasks appear, update the checklist immediately
+
+### Session End (do this LAST after tests pass)
+1. **Move** the entry from `## In Progress` to `## Completed` with a one-line summary of what was done
+2. **Append to `tasks/lessons.md`** if ANY of these happened:
+   - A mistake was made and corrected
+   - An assumption turned out wrong
+   - A non-obvious pattern was discovered
+   - A gotcha cost extra time
+3. If a lesson recurs (already in lessons.md), **promote** it to a `.cursor/rules/` entry
+
+### Entry Formats
+
+**todo.md entry:**
+```
+### YYYY-MM-DD — <ticket or title>
+- [x] Sub-task completed
+- [ ] Sub-task pending
+- **Status**: in-progress | done
+- **Summary**: <one-line outcome when done>
+```
+
+**lessons.md entry:**
+```
+### YYYY-MM-DD — <short title>
+**Context**: What was being done
+**Issue**: What went wrong or was surprising
+**Fix/Insight**: What to do differently next time
+```
+
+## Autonomous Bug Fixing
+- When given a bug report: just fix it — point at logs/errors/tests, then resolve
+- Go fix failing CI tests without being told how
+- Always start with a failing test that reproduces the bug (RED), then fix (GREEN). See `andela-tdd-discipline.mdc`.

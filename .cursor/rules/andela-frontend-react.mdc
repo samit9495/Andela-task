@@ -1,0 +1,144 @@
+---
+description: React + Vite + TypeScript conventions for the Observability Platform dashboard. Recharts for visualization. Browser MCP for inspecting the running UI.
+globs: frontend/**/*.{ts,tsx,js,jsx,css,html,json},frontend/**/*.test.{ts,tsx}
+alwaysApply: false
+---
+
+# Andela Frontend (React + Vite + TS)
+
+## Stack (from Req. doc Section 3)
+
+- **React 18** with **TypeScript** (strict mode on).
+- **Vite** as the build tool.
+- **Recharts** for all charts (error rate trend, severity distribution, health trends, incident timeline).
+- **TanStack Query** (`@tanstack/react-query`) for server state. Do not roll your own loading/error state.
+- **React Router** for navigation between the 5 dashboard pages.
+- **Testing**: Vitest + React Testing Library.
+- **Linting**: ESLint + Prettier, strict TS.
+
+Styling: keep it boring. Vanilla CSS modules or a single utility CSS file. No multi-framework UI libraries unless explicitly added.
+
+## Pages (from Req. doc Component 13)
+
+The dashboard has exactly five routes:
+
+| Route | Purpose |
+|-------|---------|
+| `/` (Overview) | Risk score, active incidents, open alerts, monitored services |
+| `/incidents` (Incident Center) | Incident list with severity, status, root cause, confidence |
+| `/topology` (Topology View) | Service graph, dependency tree, blast radius |
+| `/trends` (Trends Page) | Error rate trend, incident timeline, severity distribution, health trends |
+| `/incidents/:id/ai` (AI Analysis) | Classification, root cause, remediation, executive summary, runbook references |
+
+## Recommended project structure
+
+```
+frontend/
+├── index.html
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── src/
+│   ├── main.tsx                         # React entry, QueryClientProvider, Router
+│   ├── App.tsx                          # Layout + routes
+│   ├── pages/
+│   │   ├── OverviewPage.tsx
+│   │   ├── IncidentCenterPage.tsx
+│   │   ├── TopologyPage.tsx
+│   │   ├── TrendsPage.tsx
+│   │   └── AIAnalysisPage.tsx
+│   ├── components/
+│   │   ├── overview/                    # RiskScoreGauge, ActiveIncidentsCard, ...
+│   │   ├── incidents/                   # IncidentTable, IncidentDetail, ...
+│   │   ├── topology/                    # ServiceGraph, BlastRadius, ...
+│   │   ├── trends/                      # ErrorRateChart, IncidentTimeline, ...
+│   │   ├── analysis/                    # ClassificationPanel, RemediationPanel, RunbookReferences
+│   │   └── layout/                      # AppShell, Sidebar, TopBar
+│   ├── api/                             # one file per resource: events.ts, incidents.ts, ...
+│   ├── hooks/                           # useIncidents, useRiskScore, ...
+│   ├── lib/                             # formatters, color scales, severity helpers
+│   ├── types/                           # API contract types (mirror Pydantic schemas)
+│   └── test/setup.ts                    # Vitest + RTL setup
+└── tests/                               # cross-feature integration tests if needed
+```
+
+Rules:
+
+- Domain folders (`incidents/`, `topology/`, etc.) hold composed components. Page-level orchestration lives under `src/pages/`.
+- `src/api/` is the single boundary that talks to the backend. The rest of the app sees typed promises, not `fetch` calls.
+- Types in `src/types/` mirror the backend Pydantic schemas. Treat them as the contract — any drift is a bug.
+
+## Component rules
+
+- **One component per file**, named the same as the file.
+- **No default exports** for components — named exports only (easier to refactor).
+- **Props are explicit interfaces**, not inline types: `interface IncidentCardProps { ... }`.
+- **No `any`**. Use `unknown` and narrow.
+- **No business logic in components**. Hooks for data, pure helpers for formatting.
+- Component must work without a network if its data is mocked — testability check.
+
+## State
+
+- **Server state**: TanStack Query. Cache key conventions:
+  - `["incidents", filters]`
+  - `["risk-score"]`
+  - `["topology"]`
+  - `["events", filters]`
+  - `["alerts"]`
+- **Local UI state**: `useState`, `useReducer`. No global state for this assessment.
+- **Forms**: simple controlled components are sufficient — no complex forms in this project.
+
+## Severity / status formatting
+
+Centralize in `src/lib/severity.ts`:
+
+```ts
+export type Severity = "critical" | "high" | "medium" | "low";
+
+export const severityLabel: Record<Severity, string> = {
+  critical: "Critical",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+```
+
+Use semantic class names (`severity-critical`, `status-open`) so colors live in CSS, not in TS.
+
+## Charts
+
+- One chart per Recharts container. Do not nest three charts in one component.
+- Chart components receive prepared data; they do not fetch.
+- Tooltip text is i18n-ready: define labels in one place per chart.
+
+## Inspecting the running UI
+
+Use the **Browser MCP** (`.cursor/mcp.json`) to inspect the live dashboard during development:
+
+- Validate that the Overview page renders the risk score gauge.
+- Step through Incident Center filters and verify pagination.
+- Capture screenshots for the deck (`deck/`).
+
+The Browser MCP is for **inspection and verification**, not for generating components.
+
+## Testing rules (mirrors `andela-testing.mdc`)
+
+- Test behavior, not implementation. No snapshot tests.
+- Use `screen.getByRole`, `getByLabelText` over `getByTestId`. Test ids are for the few cases where accessible queries are not enough.
+- Mock the API at the `src/api/` layer (or use `msw` if integration is needed). Do not mock `useQuery`.
+- A component test should not need to navigate the router unless the test is about the router.
+
+## Anti-patterns
+
+- Putting fetch logic in `useEffect`. Use TanStack Query.
+- Inline styles for anything but truly one-off rules.
+- A 500-line component. Split it.
+- `// eslint-disable-next-line` without a comment explaining why.
+- Calling `/api/...` directly from a component — go through `src/api/`.
+
+## See also
+
+- `.cursor/skills/andela-frontend-react/SKILL.md` — scaffolding recipe.
+- `andela-testing.mdc` — frontend test conventions.
+- `andela-craftsmanship.mdc` — SOLID and clean code apply on the frontend too.
+- `andela-project-map.mdc` — page list and component layout.

@@ -1,0 +1,77 @@
+---
+description: Three Laws of TDD (Uncle Bob) — the agent must write a failing test before any production code. The default workflow for every behavior change.
+alwaysApply: true
+---
+
+# Andela TDD Discipline
+
+This is the **primary rule** of the workspace. The Andela assessment for the Agentic Observability Platform is graded on the visible TDD evolution in `git log`. Violating this rule is the single fastest way to fail the assessment.
+
+## The Three Laws of TDD (Uncle Bob)
+
+1. **You are not allowed to write any production code unless it is to make a failing unit test pass.**
+2. **You are not allowed to write any more of a unit test than is sufficient to fail; and compilation failures are failures.**
+3. **You are not allowed to write any more production code than is sufficient to pass the one currently failing unit test.**
+
+These laws are non-negotiable. They force a tight RED → GREEN → REFACTOR loop of seconds-to-minutes per cycle.
+
+## The loop, every time
+
+For every behavior change (feature, bug fix, refactor target):
+
+1. **RED** — Write the smallest possible failing test that describes the next behavior. Run it. **Confirm it fails** and paste the failure message. If you cannot make a test fail, you do not understand the behavior yet.
+2. **Commit** with `test: <behavior>` (the test alone, failing).
+3. **GREEN** — Write the **minimum** production code that makes the test pass. No more. No "I'll need this later." No premature abstraction. Run the test. Confirm it passes.
+4. **Commit** with `feat: <behavior>` (or `fix:` for regression tests).
+5. **REFACTOR** — Improve the code AND/OR the test without changing behavior. Re-run **all** tests. If anything breaks, undo and try a smaller refactor.
+6. **Commit** with `refactor: <what improved, why>` if you changed anything.
+7. Loop back to step 1 for the next behavior.
+
+The full one-screen recipe lives at `.cursor/skills/andela-tdd-loop/SKILL.md`.
+
+## What counts as a test (preference order)
+
+| Level | Cost | Coverage focus |
+|-------|------|----------------|
+| **Unit** | Cheap, fast (<10ms) | Most behavior. Default level. Detection math, correlation logic, risk scoring. |
+| **Integration** | Medium | Route ↔ service ↔ DB wiring; SQL queries; ingestion → detection → incident pipeline. |
+| **AI evaluation** | Medium-expensive | Classification accuracy, root-cause accuracy, remediation quality. Run on fixed fixtures, not live LLM. |
+| **E2E / API** | Expensive, slower | Critical happy paths only. |
+| **UI snapshot** | Avoid | Brittle. Use behavioral component tests (Vitest + RTL) instead. |
+
+Default to unit tests. Reach for integration only when the unit cannot exercise the wiring under review.
+
+## TDD anti-patterns (don't do these)
+
+- **Writing tests after the code.** This is not TDD. The test will only describe what was built, not what should have been built.
+- **Skipping the RED step.** "It would fail anyway" is not evidence. Run it and see the failure.
+- **Implementing two behaviors in one GREEN step.** One test, one behavior, one commit.
+- **Mocking everything.** Mock at the system boundary (HTTP, filesystem, time, the Gemini API). Do not mock your own service or repository unless the test is genuinely about coordination.
+- **Refactoring on red.** If any test is failing, you may only either (a) revert or (b) write the smallest code to get back to green. No structural changes.
+- **Commenting out a failing test to keep the suite green.** Either fix it, fix the production code, or delete the test with an explanatory commit.
+- **Tests that test the implementation.** Test observable behavior. If you must reach into internals, the design is probably wrong.
+
+## Refactoring untested code
+
+Per Sandro Mancuso: **you cannot change untested production code safely**. If you must refactor a module that lacks tests:
+
+1. Write a **characterization test** that captures the current behavior (even if it is wrong). Commit it.
+2. Refactor with the characterization test as your safety net.
+3. Once the refactor is done and green, fix any wrong behavior the characterization test pinned down — each as its own RED → GREEN cycle.
+
+## What "done" means
+
+A change is done when:
+
+- [ ] The new behavior has at least one passing test that fails without the production change.
+- [ ] All tests in the suite pass.
+- [ ] `git log --oneline` for this change shows a `test:` commit preceding the `feat:`/`fix:` commit.
+- [ ] No commit bundles a test, an implementation, and a refactor together.
+- [ ] No production code exists that is not exercised by at least one test (coverage ≥ 90% on changed modules; see `andela-testing.mdc`).
+
+## References
+
+- Uncle Bob — *The Three Laws of TDD*
+- Sandro Mancuso — *Testing and Refactoring Legacy Code*
+- Companion skill: `.cursor/skills/andela-tdd-loop/SKILL.md`
+- Companion rules: `andela-commit-hygiene.mdc`, `andela-testing.mdc`, `andela-craftsmanship.mdc`

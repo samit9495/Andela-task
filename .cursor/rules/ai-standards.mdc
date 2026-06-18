@@ -1,0 +1,25 @@
+---
+description: Response style, quality standards, verification, and core principles
+alwaysApply: true
+---
+
+# AI Standards
+
+## Response Style
+- Reply concisely; avoid repetition or filler
+- Do not introduce breaking changes unless explicitly requested; ask when unsure
+- Do not delete any files before asking for confirmation
+
+## Verification Before Done
+- Never mark a task complete without proving it works
+- Ask yourself: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
+
+## Demand Elegance
+- For non-trivial changes, ask "is there a more elegant way?" Skip for obvious fixes.
+- Challenge your own work before presenting it.
+
+## Core Principles
+- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
+- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.

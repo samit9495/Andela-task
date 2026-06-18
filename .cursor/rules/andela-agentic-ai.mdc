@@ -1,0 +1,177 @@
+---
+description: Agentic AI conventions — Gemini (google-genai) client behind a protocol, structured outputs, the 4-agent triage workflow, mandatory prompt logging, determinism, and cost guards
+alwaysApply: true
+---
+
+# Andela Agentic AI
+
+The Agentic Observability Platform's headline feature is the multi-agent triage pipeline. This rule defines how the LLM is integrated, how prompts are managed, and how every agentic call is made auditable, testable, and cost-controlled.
+
+## Cardinal rules
+
+1. **Never call `google.genai` directly from a service or route.** Always go through the `LLMClient` protocol.
+2. **Every prompt is logged** — both to the `llm_evaluations` table and appended to `prompts.md` (assessment requirement Section 15).
+3. **Every agent output is a Pydantic model** — never trust free-form text from the LLM.
+4. **Every agentic call has a documented failure path** — see `andela-error-handling.mdc`.
+5. **Tests never call the live Gemini API.** Mock at the `LLMClient` boundary.
+
+## The LLMClient protocol
+
+```python
+# backend/app/triage/llm_client.py
+from typing import Protocol, TypeVar
+from pydantic import BaseModel
+
+T = TypeVar("T", bound=BaseModel)
+
+
+class LLMClient(Protocol):
+    def complete_structured(
+        self,
+        *,
+        prompt: str,
+        schema: type[T],
+        model: str = "gemini-1.5-flash",
+        temperature: float = 0.0,
+        max_tokens: int = 1024,
+        request_id: str,
+    ) -> T:
+        """Send a prompt and return a validated structured output."""
+        ...
+```
+
+The Gemini (google-genai) implementation goes through this protocol. Tests inject a `FakeLLMClient` that returns canned, deterministic outputs.
+
+## The four-agent triage workflow (Req. doc Component 8)
+
+Each agent is its own class in `backend/app/triage/agents/`, with its own prompt template in `backend/app/triage/prompts.py` and its own tests.
+
+```
+Incident
+   │
+   ▼
+Classification Agent  ──►  IncidentCategory (Database/Auth/Network/Infra/Application)
+   │
+   ▼
+Root Cause Agent      ──►  RootCause(probable_cause, supporting_evidence)
+   │
+   ▼  (with retrieved runbooks injected)
+Remediation Agent     ──►  Remediation(action, rationale, references)
+   │
+   ▼
+Executive Summary Agent ──►  IncidentReport(category, root_cause, remediation,
+                                            confidence_score, executive_summary)
+```
+
+Each agent:
+
+- Has a single responsibility (its name describes it).
+- Returns a Pydantic schema, not text.
+- Logs its prompt + response + token counts via `prompt_log.record(...)`.
+- Has a deterministic fallback when the LLM fails (e.g., classification falls back to `"Unknown"` with `confidence=0.0`).
+
+## Structured outputs (mandatory)
+
+```python
+from pydantic import BaseModel, Field
+from enum import Enum
+
+
+class IncidentCategory(str, Enum):
+    DATABASE = "database"
+    AUTHENTICATION = "authentication"
+    NETWORK = "network"
+    INFRASTRUCTURE = "infrastructure"
+    APPLICATION = "application"
+    UNKNOWN = "unknown"
+
+
+class ClassificationOutput(BaseModel):
+    category: IncidentCategory
+    confidence: float = Field(ge=0.0, le=1.0)
+    reasoning: str = Field(max_length=2000)
+```
+
+Use the Gemini Structured Output feature (`response_schema` + `response_mime_type="application/json"` with a Pydantic schema). The `LLMClient.complete_structured` method validates the response against the schema; a validation failure raises `LLMResponseInvalid` and the agent falls back.
+
+## Prompt management
+
+- All prompt templates live in `backend/app/triage/prompts.py`.
+- Each template has a **version stamp** (e.g., `CLASSIFICATION_PROMPT_V2`).
+- A prompt change is a **breaking change** for AI evaluations — bump the version and re-record fixtures.
+- Templates use `str.format` or `string.Template` — **never f-strings with user data** (prompt injection risk).
+
+```python
+CLASSIFICATION_PROMPT_V1 = """\
+You are an SRE classifier. Categorize the incident below into exactly one of:
+database, authentication, network, infrastructure, application.
+
+Respond with valid JSON matching the provided schema. Do not include any other text.
+
+Incident summary:
+{incident_summary}
+
+Top events (signature, count, level):
+{top_events}
+"""
+```
+
+## Mandatory prompt logging
+
+Every LLM call writes a row to the `llm_evaluations` table **and** appends to `prompts.md`:
+
+```
+## 2026-06-18T10:00:00Z — Classification Agent v1 — incident_id=42
+### Prompt
+<full prompt text>
+### Response
+<full structured response, one line>
+### Metrics
+model=gemini-1.5-flash  tokens_in=512  tokens_out=64  latency_ms=820  status=ok
+```
+
+Without this, the assessment fails (Req. doc Section 15: "prompts.md contains complete prompt history"). The `prompt_log` module is the single point that does this — never write directly to `prompts.md` from an agent.
+
+## Determinism
+
+- Default `temperature=0.0`. If a higher temperature is needed for a specific agent, document why.
+- AI evaluation tests use `temperature=0.0` and a fixed model name; non-determinism is a test bug.
+- Never use `random.choice(...)` inside a prompt template construction without a seeded `random.Random(...)`.
+
+## Cost & rate guards
+
+- `max_tokens` is set on every call. Default 1024 for agents, 256 for classification.
+- The settings module defines a per-incident token budget (e.g., 4000 total for the full pipeline). The triage service tracks usage and stops calling further agents once exceeded — and falls back.
+- Retry strategy: 1 retry on transient errors with exponential backoff. After that, fall back deterministically.
+
+## Sanitization & prompt injection
+
+User-supplied content (event messages, incident summaries) is **untrusted input** for the LLM. See `andela-security.mdc`:
+
+- Strip control characters and known injection markers from event messages before inclusion.
+- Wrap user content in clearly delimited blocks (`<<<INPUT>>>...<<<END>>>`).
+- Tell the model in the system prompt that content inside the delimiters is data, not instructions.
+- Validate the structured output Pydantic schema. If the model tries to "obey" injected instructions, the schema validation will catch the deviation.
+
+## Testing agentic code
+
+- **Unit tests** use the `FakeLLMClient` fixture (returns canned outputs per prompt-hash). Test prompt construction, output handling, and fallback paths separately.
+- **AI evaluation tests** (`tests/ai_eval/`) measure classification/root-cause/remediation accuracy on fixed scenarios with recorded LLM responses. Live API calls in CI are forbidden.
+- See `andela-testing.mdc` for the evaluation suite shape.
+
+## Anti-patterns
+
+- `genai.Client()` instantiated directly inside an agent.
+- Free-form `response.text.split(...)` parsing instead of structured outputs.
+- Concatenating user message into a prompt with `f"Classify: {message}"` (injection risk).
+- Logging full prompts that contain PII without sanitization.
+- Skipping `prompts.md` updates because "the test passed".
+- Adding a new agent without a corresponding unit test and AI evaluation fixture.
+
+## See also
+
+- `andela-rag.mdc` — runbook retrieval injected into the Remediation Agent prompt.
+- `andela-error-handling.mdc` — LLM failure paths.
+- `andela-security.mdc` — prompt injection, secret hygiene.
+- `andela-testing.mdc` — AI evaluation tests.
+- `.cursor/skills/andela-agent-workflow/SKILL.md` — scaffold a new agent test-first.

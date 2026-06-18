@@ -1,0 +1,92 @@
+---
+description: Software craftsmanship — SOLID, Clean Code, Simple Design, YAGNI/DRY/KISS. The values the assessor reads code against.
+alwaysApply: true
+---
+
+# Andela Craftsmanship
+
+These are the values the assessor reads the code against on the Agentic Observability Platform.
+
+Source material:
+
+- Katerina Trajchevska — SOLID Design Principles
+- Sandro Mancuso — Testing and Refactoring Legacy Code
+- Venkat Subramaniam — Reasons & Ways to Improve Code Quality
+- Trisha Gee — Reading Code Is Harder Than Writing It
+- Robert C. Martin (Uncle Bob) — Clean Code, Three Laws of TDD
+
+## Readability first
+
+Trisha Gee: code is read more than it is written. Optimize for the next person (likely you, in three weeks).
+
+- Intention-revealing names: `detect_error_rate_spike` not `det_err`, `correlate_anomalies_into_incident` not `corr`. `affected_services` not `svcs`.
+- Avoid abbreviations and Hungarian notation. An incident is not "inc", a runbook is not "rb".
+- One thing per name. If a function name contains `and`, split it.
+- A reader should understand a function from its name without opening it.
+
+## SOLID — one line each, with examples
+
+| Principle | One-line | Example in this codebase |
+|-----------|----------|--------------------------|
+| **S** Single Responsibility | A class/function has one reason to change. | `EventRepository` does persistence; `DetectionEngine` does anomaly detection; `CorrelationEngine` does grouping. Do not merge them. |
+| **O** Open/Closed | Open for extension, closed for modification. | Add a new detection strategy (e.g., seasonal decomposition) by adding a new `Detector` class, not by `if strategy == 'seasonal'` chains. |
+| **L** Liskov Substitution | Subtypes are usable wherever the base type is. | Any `Detector` implementation must honor the same `detect(events) -> list[Anomaly]` contract; tests use the same fixtures. |
+| **I** Interface Segregation | Many small interfaces beat one fat one. | The `AlertEngine` should not need to depend on a `triage_incident` method. |
+| **D** Dependency Inversion | Depend on abstractions, not concretions. | The agentic triage depends on an `LLMClient` protocol, not directly on `genai.Client`, so tests can swap a fake. |
+
+## Four Rules of Simple Design (Kent Beck)
+
+In priority order:
+
+1. **Passes all the tests.** If it does not, nothing else matters.
+2. **Reveals intent.** Names, structure, and types tell the reader what the code does.
+3. **No duplication.** Both literal duplication and duplicated knowledge.
+4. **Fewest elements.** Delete what you do not need. Smaller is better.
+
+When choosing between two designs that both pass tests: pick the one with fewer moving parts.
+
+## YAGNI / DRY / KISS
+
+- **YAGNI (You Aren't Gonna Need It)**: do not add abstractions, fields, or configuration for behavior you have not been asked to deliver. The PDF asks for a focused observability platform; do not build a microservice mesh.
+- **DRY (Don't Repeat Yourself)**: duplication of *knowledge* is the real cost. Two similar-looking blocks that happen to be alike by accident are not duplication; do not force a shared abstraction.
+- **KISS (Keep It Simple)**: choose the boring solution. SQLite + SQLAlchemy ORM + Pydantic schemas + FastAPI routers + a single Gemini (google-genai) client is enough.
+
+## Small things win
+
+| Smell | Direction |
+|-------|-----------|
+| Function over ~20 lines | Extract intermediate functions named after what they compute. |
+| File over ~300 lines | Split by responsibility. |
+| Function with > 3 parameters | Group into a value object or dataclass. |
+| Magic number (e.g., `if z_score > 3`) | Named constant or settings value (e.g., `ANOMALY_Z_SCORE_THRESHOLD`). |
+| `if/elif` chain on a type field | Polymorphism or a strategy map. |
+| Deep nesting (> 3 levels) | Early returns, guard clauses. |
+| Boolean parameter (`flag=True`) | Two functions with intention-revealing names. |
+| Comments explaining what the code does | Rewrite the code so the comment is unnecessary. Keep only "why" comments. |
+
+## Commands vs queries
+
+- A function either **does** something (command, returns `None` or a confirmation) or **answers** something (query, returns a value with no side effects). Not both.
+- Pure-where-possible: services depend on a `Session`, time/uuid sources, and the LLM client via injection so they remain testable.
+
+## Tell, don't ask
+
+- Push behavior onto the object that owns the data. `incident.is_critical()` beats `if incident.severity == "critical" and incident.status == "open": ...` scattered across services.
+
+## Reading-the-code discipline
+
+Before you change a file:
+
+1. Read it top-to-bottom.
+2. Read the tests that exercise it.
+3. Run the tests. Confirm they pass.
+4. Now you may edit.
+
+This is the cheapest insurance against regressions.
+
+## Cross-references
+
+- `andela-tdd-discipline.mdc` — the loop that makes simple design possible.
+- `andela-code-quality.mdc` — concrete smell catalog and edge-case guards.
+- `andela-testing.mdc` — characterization tests before refactoring untested code.
+- `.cursor/skills/llm-council/SKILL.md` — for non-obvious design decisions.

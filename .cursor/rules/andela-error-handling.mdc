@@ -1,0 +1,134 @@
+---
+description: Domain exceptions, FastAPI exception handlers, structured error payloads, no silent failures
+alwaysApply: true
+---
+
+# Andela Error Handling
+
+## Layered exceptions
+
+| Layer | Raises | Catches |
+|-------|--------|---------|
+| Repository | `sqlalchemy.exc.*`, `NoResultFound` | Should NOT swallow — let it bubble. |
+| External adapter (LLM, webhook, email) | Adapter-specific errors (`LLMTimeout`, `LLMRateLimited`, `LLMResponseInvalid`) | Translates network/HTTP errors into adapter exceptions. |
+| Service | Domain exceptions (`IncidentNotFound`, `EventValidationError`, `TriageFailed`) | Catches DB / adapter exceptions only when there is a domain meaning to assign. |
+| Route | Nothing local | Catches nothing; the exception handler maps domain exceptions to HTTP. |
+| `main.py` | Global `app.exception_handler(DomainError)` | Maps everything to `JSONResponse`. |
+
+## Define domain exceptions in one place
+
+```python
+# backend/app/core/exceptions.py
+class DomainError(Exception):
+    """Base for domain-level errors mapped to HTTP responses."""
+
+class EventValidationError(DomainError):
+    pass
+
+class IncidentNotFound(DomainError):
+    pass
+
+class TriageFailed(DomainError):
+    """Agentic triage could not produce a structured output."""
+
+class LLMTimeout(DomainError):
+    pass
+
+class LLMResponseInvalid(DomainError):
+    """LLM returned a response that failed structured-output validation."""
+```
+
+## Register exception handlers
+
+```python
+# backend/app/main.py
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from app.core.exceptions import (
+    IncidentNotFound, EventValidationError, TriageFailed, LLMTimeout
+)
+
+app = FastAPI()
+
+
+@app.exception_handler(IncidentNotFound)
+async def handle_incident_not_found(request, exc):
+    return JSONResponse(
+        status_code=404,
+        content={"detail": str(exc) or "Incident not found", "code": "incident_not_found"},
+    )
+
+
+@app.exception_handler(TriageFailed)
+async def handle_triage_failed(request, exc):
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Triage temporarily unavailable", "code": "triage_failed"},
+    )
+```
+
+## Error response shape
+
+Every error response has this shape:
+
+```json
+{ "detail": "Human-readable message", "code": "machine_readable_code" }
+```
+
+This matches what FastAPI returns for `HTTPException` (`detail` field) so the frontend / SDK can parse uniformly. Add `code` for machine handling.
+
+## Sanitize errors at the boundary
+
+- **Never** include stack traces, file paths, SQL fragments, or secret-bearing strings in the response body.
+- The LLM may echo the input prompt in its error message — strip it before logging or returning.
+- The internal log gets the full context; the client gets only what they need to retry or report.
+
+```python
+@app.exception_handler(Exception)
+async def handle_unexpected(request, exc):
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error", "code": "internal_error"},
+    )
+```
+
+## Never silent
+
+- No `except: pass`.
+- No `except Exception as e: print(e)`.
+- Every caught exception is either:
+  - **Re-raised** (after logging context), or
+  - **Translated** to a domain exception, or
+  - **Handled** with a documented recovery path (e.g., LLM rate-limit → exponential backoff).
+
+## LLM failure paths (mandatory)
+
+Every agentic call needs a defined behavior for:
+
+| Failure | Strategy |
+|---------|----------|
+| Timeout | Retry once with backoff, then raise `LLMTimeout`; the Executive Summary Agent falls back to a deterministic summary. |
+| Rate limit | Backoff + retry per the Google AI guidance. After max retries, raise `LLMRateLimited`. |
+| Malformed JSON / fails Pydantic validation | Retry once with a "respond in valid JSON only" follow-up; then raise `LLMResponseInvalid`. |
+| Auth / 401 | Do not retry; raise immediately and alert ops. |
+
+The triage pipeline must **never** crash the whole request because of a single agent failure — it falls back to a deterministic best-effort summary and records `confidence_score = 0.0`.
+
+## HTTPException usage
+
+For ad-hoc 4xx responses inside a route (e.g. malformed query that escaped Pydantic):
+
+```python
+raise HTTPException(status_code=400, detail="window must be a positive integer")
+```
+
+Prefer Pydantic validation (`Field`, validators) — it returns a consistent 422 with the field that failed.
+
+## See also
+
+- `andela-fastapi-core.mdc` — layering and where exceptions are raised vs caught.
+- `andela-api-routes.mdc` — HTTP status code semantics.
+- `andela-code-quality.mdc` — anti-patterns in error handling.
+- `andela-agentic-ai.mdc` — agent failure handling and fallbacks.
+- `andela-security.mdc` — error sanitization for security.

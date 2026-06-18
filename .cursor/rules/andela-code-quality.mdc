@@ -1,0 +1,83 @@
+---
+description: Code smell catalog, edge-case guards, structural rules — concrete companion to andela-craftsmanship
+alwaysApply: true
+---
+
+# Andela Code Quality
+
+The companion to `andela-craftsmanship.mdc` — concrete smells, edge cases, and structural rules. For values and principles, read `andela-craftsmanship.mdc` first.
+
+## Smells to fix
+
+| Smell | Fix |
+|-------|-----|
+| Magic numbers (`if z > 3`, `if count > 70`) | Named constants (`ANOMALY_Z_SCORE_THRESHOLD = 3.0`, `SIGNATURE_BURST_THRESHOLD = 50`). |
+| Magic strings (`level == "ERROR"`) | `Enum` (`LogLevel.ERROR`) or module-level constant. |
+| Wide `try / except Exception` | Catch specific exceptions; let unexpected ones bubble to the global handler. |
+| `repository.get(id=x)` without a None check | `repository.get_or_404(id)` or explicit `if not incident: raise IncidentNotFound`. |
+| Returning `None` to signal "not found" mixed with returning models | Use a custom exception or `Result`-style return — be consistent. |
+| Function > 20 lines, file > 300 lines | Split. Extract helpers named after what they compute. |
+| `if` chain on a field that should be polymorphic | Strategy map or `match`/`case` for clarity. |
+| Boolean trap (`process(incident, dry_run=True)`) | Two functions: `process(incident)`, `simulate_process(incident)`. |
+| `print()` for diagnostics | `logger.info(...)` / `logger.debug(...)`. |
+| Commented-out code | Delete it. Git remembers. |
+| `float` for risk scores or rates | `Decimal` (or `float` only if the math is statistical and the precision is documented). |
+
+## Edge cases (every change must consider)
+
+- **Empty inputs**: empty event list, empty signature, `None` metadata, zero-window. What does the function return?
+- **One-element inputs**: aggregations over a single event must not divide by zero.
+- **Zero matches**: querying anomalies for a service with no events should not 500. Return `[]` and **test it**.
+- **Numerical precision**: avoid float comparisons. Use `math.isclose`, or `Decimal` where exact representation matters.
+- **Division by zero**: guard `if window_size == 0: return 0.0` before computing rates.
+- **Off-by-one**: rolling-window math, pagination `offset + limit`, time bucket boundaries.
+- **Long strings**: `Field(max_length=...)` on every text input. SQLite does not enforce VARCHAR length by default — Pydantic must.
+- **Unicode**: log messages contain non-ASCII. Tests must include at least one non-ASCII case.
+- **Time zones**: store all timestamps in UTC, ISO 8601. Reject naive datetimes at the API boundary.
+- **LLM failures**: the Gemini API can rate-limit, time out, return malformed JSON. Every agent call needs a documented failure path.
+- **Race conditions**: a second `POST /events` may arrive while the first is being normalized. Idempotency / dedup matters.
+
+## Risk score and statistical math
+
+```python
+from decimal import Decimal
+
+RISK_SCORE_SCALE = Decimal("0.01")
+RISK_SCORE_MAX = Decimal("100")
+
+def clamp_risk_score(value: Decimal) -> Decimal:
+    if value < 0:
+        return Decimal("0")
+    if value > RISK_SCORE_MAX:
+        return RISK_SCORE_MAX
+    return value.quantize(RISK_SCORE_SCALE)
+```
+
+- Risk score, rates, percentages: clamp to documented ranges. Never let them go negative or over 100.
+- For statistical math (z-score, EWMA, mean/stddev), `numpy` floats are acceptable; document the precision and do not compare with `==`.
+
+## Logging context
+
+Every error log includes the identifiers needed to reproduce:
+
+```python
+logger.exception(
+    "Detection failed for service=%s window=%s strategy=%s",
+    service, window, strategy,
+)
+```
+
+- Do not log full event payloads (PII / message-body risk).
+- Do not log secrets, API keys, or LLM prompts containing user data without sanitization.
+- Do not log full LLM responses if they may echo PII — log the structured output (category, confidence) instead.
+
+## Structure rules
+
+- One responsibility per file. `events.py` (route) does not import from `incidents.py` (route).
+- `__init__.py` is for re-exports, not behavior.
+- A circular import is a design smell — split the offending module.
+- Detection strategies live one-per-file under `backend/app/detection/strategies/`. Triage agents live one-per-file under `backend/app/triage/agents/`.
+
+## Authority
+
+This rule is concrete; for the values that produced it, read `andela-craftsmanship.mdc`. The code reviewer at `.cursor/agents/andela-code-reviewer.md` checks against both.

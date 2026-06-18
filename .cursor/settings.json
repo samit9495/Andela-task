@@ -1,0 +1,4 @@
+{
+  "_comment": "Project-scoped Cursor settings. Keep minimal.",
+  "_about": "Plugins, MCP servers, and rules are configured via this folder (.cursor/). MCPs live in mcp.json; secrets come from environment variables documented in .env.example."
+}

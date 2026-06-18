@@ -1,0 +1,164 @@
+---
+description: FastAPI route handler patterns — APIRouter, Depends, response_model, HTTPException, thin handlers
+globs: backend/app/api/**/*.py,backend/app/main.py
+alwaysApply: false
+---
+
+# Andela FastAPI API Routes
+
+## File layout
+
+One file per resource under `backend/app/api/routes/`. Each file exposes a single `APIRouter` named `router`.
+
+```python
+# backend/app/api/routes/events.py
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
+from app.schemas.event import EventCreate, EventRead, BatchEventCreate
+from app.ingestion.ingestion_service import IngestionService
+
+router = APIRouter(prefix="/api/v1/events", tags=["events"])
+```
+
+Include in `backend/app/main.py`:
+
+```python
+from app.api.routes import events, incidents, alerts, risk_score, topology, health, metrics
+
+app.include_router(events.router)
+app.include_router(incidents.router)
+app.include_router(alerts.router)
+app.include_router(risk_score.router)
+app.include_router(topology.router)
+app.include_router(health.router)
+app.include_router(metrics.router)
+```
+
+## API surface (from Req. doc Sections 5 & 8)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/health` | Liveness/readiness |
+| GET | `/metrics` | Prometheus-style or platform metrics |
+| POST | `/api/v1/events` | Single log event ingestion |
+| POST | `/api/v1/events/batch` | Batch ingestion |
+| GET | `/api/v1/events` | Paginated event list with filters |
+| GET | `/api/v1/incidents` | Incident list (filter by status / severity) |
+| GET | `/api/v1/incidents/{id}` | Incident detail with triage output |
+| GET | `/api/v1/alerts` | Alert list |
+| GET | `/api/v1/risk-score` | Current risk score |
+| GET | `/api/v1/topology` | Service graph |
+
+## Handler shape
+
+Thin: parse → delegate → return. No SQL, no `Session` arithmetic, no business logic.
+
+```python
+@router.post("", response_model=EventRead, status_code=status.HTTP_201_CREATED)
+def create_event(
+    payload: EventCreate,
+    db: Session = Depends(get_db),
+) -> EventRead:
+    service = IngestionService(db)
+    event = service.ingest(payload)
+    return EventRead.model_validate(event)
+
+
+@router.post("/batch", response_model=BatchIngestResult, status_code=status.HTTP_202_ACCEPTED)
+def create_event_batch(
+    payload: BatchEventCreate,
+    db: Session = Depends(get_db),
+) -> BatchIngestResult:
+    return IngestionService(db).ingest_batch(payload.events)
+```
+
+Rules:
+
+- **Always declare `response_model=`** so the response is validated and the OpenAPI schema is correct.
+- **Always declare `status_code=`** explicitly (201 for create, 202 for accepted batch, 204 for delete, 200 default).
+- **Use `HTTPException(status_code=..., detail=...)`** for domain errors, mapped from custom exceptions in the service via an exception handler (see `andela-error-handling.mdc`).
+- Path params are typed. Use `Annotated[int, Path(ge=1)]` for ID validation.
+
+## HTTP status semantics
+
+| Code | When |
+|------|------|
+| 200 | Successful GET / PATCH / PUT |
+| 201 | Resource created via POST |
+| 202 | Batch accepted for asynchronous processing |
+| 204 | Successful DELETE (no body) |
+| 400 | Validation error not caught by Pydantic; bad domain input |
+| 404 | Resource not found |
+| 409 | Conflict (duplicate unique field) |
+| 422 | Pydantic validation error (FastAPI default) |
+| 429 | Rate-limited (e.g., ingestion throttling) |
+| 500 | Unhandled — should be very rare |
+| 503 | Triage / external dependency unavailable |
+
+## Pydantic schemas
+
+- Separate schemas per use case: `EventCreate`, `EventRead`, `BatchEventCreate`. Never one God schema.
+- `from_attributes=True` (`model_config = ConfigDict(from_attributes=True)`) on Read schemas to enable ORM-to-Pydantic conversion.
+- Use `Field(..., min_length=1, max_length=...)` for documentation **and** validation.
+- The Event schema must match Req. doc Section 5: required `service`, `level`, `message`, `timestamp`; optional `hostname`, `environment`, `metadata`.
+
+```python
+from datetime import datetime
+from enum import Enum
+from pydantic import BaseModel, Field, ConfigDict
+
+
+class LogLevel(str, Enum):
+    INFO = "INFO"
+    WARN = "WARN"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
+
+
+class EventCreate(BaseModel):
+    service: str = Field(min_length=1, max_length=100)
+    level: LogLevel
+    message: str = Field(min_length=1, max_length=4000)
+    timestamp: datetime
+    hostname: str | None = Field(default=None, max_length=255)
+    environment: str | None = Field(default=None, max_length=50)
+    metadata: dict | None = None
+```
+
+## Query parameters
+
+```python
+@router.get("", response_model=list[EventRead])
+def list_events(
+    service: str | None = Query(None, max_length=100),
+    level: LogLevel | None = Query(None),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> list[EventRead]:
+    return EventService(db).list(service=service, level=level, limit=limit, offset=offset)
+```
+
+- Pagination is mandatory for list endpoints (default 50, max 500).
+- Filter via query params, never via request body on GET.
+- For batch endpoints, enforce a maximum batch size in the schema (e.g., `Field(max_length=1000)`).
+
+## Permissions / auth
+
+Out of scope for the assessment unless explicitly added. If added later, use a single `Depends(current_user)` and avoid sprinkling auth logic across handlers.
+
+## Anti-patterns
+
+- Business logic inside the route function.
+- Building SQL inside the route.
+- Returning a raw model instance without `response_model=`.
+- `try/except Exception` in a route. Let the global handler handle it.
+- Calling the LLM directly from a route. Always go through a service.
+
+## See also
+
+- `andela-fastapi-core.mdc` — the layering this depends on.
+- `andela-error-handling.mdc` — exception mapping.
+- `.cursor/skills/scaffold-api-endpoint/SKILL.md` — full scaffolding recipe.

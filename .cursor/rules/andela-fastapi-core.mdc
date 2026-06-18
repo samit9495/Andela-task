@@ -1,0 +1,157 @@
+---
+description: Core FastAPI + SQLAlchemy + Pydantic conventions for the Agentic Observability Platform
+alwaysApply: true
+---
+
+# Andela FastAPI Core
+
+## Project Stack
+
+- **Python 3.12+**, **FastAPI**, **SQLAlchemy 2.x** (typed), **Pydantic v2**
+- **SQLite** as the relational database (single file at `var/watchdog.db` or project root, gitignored)
+- **Uvicorn** for the ASGI server
+- **NumPy** for the statistical detection engine
+- **google-genai SDK** (Gemini 1.5 Flash) behind an `LLMClient` protocol
+- **pytest** for backend tests
+- Single-tenant. No schemas, no multi-tenancy. Use `Base.metadata.create_all` on startup, or `alembic` only if explicitly requested.
+
+## Architecture: Thin routes → Services → Repositories/Models
+
+```
+backend/
+└── app/
+    ├── main.py                    # FastAPI() app factory, router includes, lifespan, exception handlers
+    ├── core/
+    │   ├── config.py              # pydantic-settings; reads from env (GEMINI_API_KEY, DB URL, thresholds)
+    │   └── exceptions.py          # DomainError + subclasses
+    ├── db/
+    │   ├── base.py                # DeclarativeBase
+    │   ├── session.py             # engine, SessionLocal, get_db dependency
+    │   └── init_db.py             # create_all on startup; not a real migration system
+    ├── models/                    # SQLAlchemy ORM models (one file per aggregate)
+    │   ├── event.py
+    │   ├── anomaly.py
+    │   ├── incident.py
+    │   ├── alert.py
+    │   ├── runbook.py
+    │   ├── metric_rollup.py
+    │   ├── service_topology.py
+    │   └── llm_evaluation.py
+    ├── schemas/                   # Pydantic v2 request/response models
+    │   ├── event.py
+    │   ├── incident.py
+    │   ├── alert.py
+    │   └── topology.py
+    ├── repositories/              # data access (one file per aggregate)
+    │   ├── event_repository.py
+    │   ├── anomaly_repository.py
+    │   ├── incident_repository.py
+    │   └── alert_repository.py
+    ├── ingestion/                 # log ingestion + normalization
+    │   ├── normalizer.py
+    │   └── ingestion_service.py
+    ├── detection/                 # statistical detection engine
+    │   ├── base.py                # Detector protocol
+    │   └── strategies/
+    │       ├── error_rate_z_score.py
+    │       ├── error_rate_ewma.py
+    │       ├── signature_frequency.py
+    │       └── severity_drift.py
+    ├── correlation/               # event correlation engine
+    │   └── correlation_engine.py
+    ├── topology/                  # service topology + blast radius
+    │   └── topology_engine.py
+    ├── incidents/                 # incident lifecycle
+    │   └── incident_service.py
+    ├── triage/                    # agentic AI triage
+    │   ├── llm_client.py          # LLMClient protocol + Gemini (google-genai) implementation
+    │   ├── prompts.py             # all prompt templates, version-stamped
+    │   ├── prompt_log.py          # writes to llm_evaluations + prompts.md
+    │   └── agents/
+    │       ├── classification_agent.py
+    │       ├── root_cause_agent.py
+    │       ├── remediation_agent.py
+    │       └── executive_summary_agent.py
+    ├── rag/                       # runbook retrieval
+    │   ├── runbook_loader.py
+    │   ├── embedder.py
+    │   └── retriever.py
+    ├── alerts/                    # alert engine
+    │   ├── alert_service.py
+    │   └── channels/              # dashboard, webhook, email_sim, slack_sim
+    ├── risk/                      # risk score engine
+    │   └── risk_score_service.py
+    └── api/
+        └── routes/
+            ├── events.py          # POST /api/v1/events, /events/batch, GET /events
+            ├── incidents.py       # GET /incidents, /incidents/{id}
+            ├── alerts.py
+            ├── topology.py
+            ├── risk_score.py
+            ├── health.py
+            └── metrics.py
+```
+
+Rules for each layer:
+
+- **Routes** are thin: parse request, call service, return Pydantic response. No business logic, no SQL.
+- **Services** contain the use cases. They depend on repositories, the LLM client, and pure helpers. No FastAPI imports.
+- **Repositories** wrap SQLAlchemy queries. Return models or plain values, never `Response` objects.
+- **Models** describe the schema. No business methods that require external services.
+- **Schemas** validate and shape I/O. Never reuse a model directly as a response type.
+- **Detection / triage / RAG / alerts / risk** are independent engines composed by services. Each engine is unit-testable in isolation.
+
+## Dependency injection
+
+- The database session is injected via `Depends(get_db)`. Routes never import `SessionLocal` directly.
+- Services accept `Session` (or a repository) and the `LLMClient` via their constructor, never via globals or module-level state. This is what makes them unit-testable.
+
+```python
+def get_triage_service(
+    db: Session = Depends(get_db),
+    llm: LLMClient = Depends(get_llm_client),
+) -> TriageService:
+    return TriageService(IncidentRepository(db), llm)
+```
+
+## Transactions
+
+- For any multi-statement write, wrap it in `with db.begin():` or use `Session.commit()` at the **service boundary**, not inside repositories.
+- Reads do not need explicit transactions.
+- One service call = one logical transaction.
+
+## Numerical types
+
+- Risk scores, rates, percentages: prefer `Decimal` when the value is exposed in an API contract. `Numeric(5, 2)` for risk score.
+- Statistical math (z-score, EWMA, mean/stddev): `numpy` floats are acceptable internally; convert to a documented type at the API boundary.
+
+## Time
+
+- All timestamps stored and exchanged as **timezone-aware UTC** (`datetime.now(tz=timezone.utc)` or `Field(..., examples=["2026-06-18T10:00:00Z"])`).
+- Reject naive datetimes at the Pydantic layer.
+
+## Logging
+
+- `logger = logging.getLogger(__name__)` at the top of every module that needs to log.
+- `logger.exception(...)` inside `except` blocks. Never `print` for error reporting.
+- Structured logging is preferred (JSON formatter); attach `request_id` and, where relevant, `incident_id` / `event_id`.
+
+## Imports (canonical)
+
+```python
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from sqlalchemy import select, func, insert
+from pydantic import BaseModel, Field
+
+from app.db.session import get_db
+from app.models.event import Event
+from app.schemas.event import EventCreate, EventRead
+from app.services.ingestion_service import IngestionService
+from app.triage.llm_client import LLMClient, get_llm_client
+```
+
+## What this rule does NOT cover
+
+- DRF, Django views, multi-tenancy, schema switching, AWS Lambdas — none apply.
+- See `andela-api-routes.mdc` for the route-level patterns, `andela-sql-safety.mdc` for query safety, `andela-testing.mdc` for the test stack, `andela-agentic-ai.mdc` for the LLM client design.

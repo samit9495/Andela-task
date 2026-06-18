@@ -1,0 +1,92 @@
+---
+description: "Keyword shortcuts that change AI behavior. Triggers: TDD, RED, GREEN, REFACTOR, AUDIT, TESTS, BUG, SEC, AGENT, RAG, DETECT, EVAL, ULTRA, STEP, WHY5, FIRST, PRE, POST, INVERT, TLDR, ELI5, BLUF, SHORT, TABLE, DENSE, DELPHI, V2, ALT3, SCOPE, COUNCIL, DEBATE"
+alwaysApply: true
+---
+
+# AI Shortcuts
+
+Keyword triggers that modify behavior when they appear at the start of a prompt. Shortcuts stack: `ULTRA AUDIT: backend/app/triage/agents/classification_agent.py` = deep reasoning + full code review.
+
+## TDD Loop (Andela core discipline)
+
+| Shortcut | Behavior |
+|----------|----------|
+| `TDD: <behavior>` | Enter the full Red-Green-Refactor loop via `.cursor/skills/andela-tdd-loop/SKILL.md`. Write the smallest failing test first, commit with `test:`, then minimum impl, commit with `feat:`, then refactor. |
+| `RED: <behavior>` | Write only the next failing test. Run it. Paste the failure. Commit with `test: ...`. Do NOT write production code. |
+| `GREEN: <test>` | Given a failing test, write the minimum production code to pass it. Run all tests. Commit with `feat: ...`. |
+| `REFACTOR: <target>` | Tests must already be green. Improve structure without changing behavior. Re-run all tests after every micro-step. Commit with `refactor: ...`. |
+
+## Code Intelligence
+
+| Shortcut | Behavior |
+|----------|----------|
+| `AUDIT: <target>` | Full code review using `.cursor/agents/andela-code-reviewer.md` checklist. Read all modified/target files, run every checklist section (including TDD-discipline, craftsmanship, agentic correctness, security), report issues by severity. |
+| `TESTS: <target>` | Write tests following `andela-testing.mdc` TDD flow. Red-green-refactor. |
+| `BUG: <description>` | Investigate root cause. Write a failing regression test first (RED), confirm it fails, then fix (GREEN). Update `tasks/lessons.md` if the bug reveals a non-obvious pattern. |
+| `SEC: <target>` | Security audit per `andela-security.mdc` and `.cursor/skills/security-audit/SKILL.md`: scan for hardcoded secrets, f-strings in SQL, missing input validation, error leakage, prompt injection. Report findings with severity. Backed by `.cursor/agents/andela-security-reviewer.md`. |
+
+## Domain shortcuts (Agentic Observability Platform)
+
+| Shortcut | Behavior |
+|----------|----------|
+| `AGENT: <agent name or area>` | Scaffold or modify an agent in the triage pipeline using `.cursor/skills/andela-agent-workflow/SKILL.md`. Test-first, structured outputs, prompt logging mandatory. |
+| `RAG: <task>` | Work on the runbook RAG engine via `.cursor/skills/andela-rag-runbooks/SKILL.md`. Loader, embedder, retriever, citations. |
+| `DETECT: <strategy>` | Implement or modify a detection strategy via `.cursor/skills/andela-detection-strategy/SKILL.md`. Deterministic, no magic thresholds, NumPy patterns. |
+| `EVAL: <agent>` | Run or extend AI evaluation tests for a specific agent. See `tests/ai_eval/` and `andela-testing.mdc`. |
+
+## Thinking Frameworks
+
+| Shortcut | Behavior |
+|----------|----------|
+| `ULTRA` | Maximum depth reasoning. Enumerate tradeoffs, edge cases, failure modes, and second-order effects before answering. Do not rush to a solution. |
+| `STEP` | Step-by-step logical breakdown. Number every step. Show reasoning chain explicitly. |
+| `WHY5` | Five Whys root cause analysis. Start from the symptom, ask "why?" five times, arrive at the root cause before proposing a fix. |
+| `FIRST` | First principles reasoning. Strip all assumptions, identify the fundamental constraints, rebuild the solution from scratch. |
+| `PRE` | Pre-mortem. Assume the proposed change fails in production. List the 5 most likely failure modes and how to prevent each. |
+| `POST` | Post-mortem. Analyze what went wrong. Extract lessons and append to `tasks/lessons.md`. |
+| `INVERT` | Inversion. Define what failure looks like first, then derive the solution that avoids every failure path. |
+
+## Output Formatting
+
+| Shortcut | Behavior |
+|----------|----------|
+| `TLDR` | 2-3 sentence summary only. No code, no detail. |
+| `ELI5` | Explain using a simple analogy. No jargon, no technical terms. |
+| `BLUF` | Bottom Line Up Front. State the conclusion/recommendation first, then provide supporting detail. |
+| `SHORT` | Maximum 3 sentences. |
+| `TABLE` | Present the answer as a comparison table with clear columns. |
+| `DENSE` | Information-dense. No filler, no repetition. Assume expert audience. |
+
+## Meta Control
+
+| Shortcut | Behavior |
+|----------|----------|
+| `DELPHI` | Three-pass loop: (1) generate a solution, (2) critique it, (3) produce an improved final version incorporating the critique. |
+| `V2` | Take the previous output and produce an improved version. State what changed and why. |
+| `ALT3` | Generate 3 distinct alternative approaches. For each: one-line summary, key tradeoff, and when to prefer it. |
+| `SCOPE` | Before solving, define the problem boundary: what is in scope, what is out, what assumptions are being made, what unknowns remain. |
+
+## Cross-References (do not duplicate)
+
+- `COUNCIL` / `DEBATE` / `WAR ROOM` → handled by the `llm-council` skill. See `.cursor/skills/llm-council/SKILL.md`.
+- `PLAN` → use Cursor's native plan mode.
+
+## Usage Examples
+
+```
+TDD: ingestion endpoint accepts a single log event with required fields
+RED: z-score detector flags anomaly when current rate is 7 sigma above baseline
+GREEN: implement ZScoreDetector returning Anomaly when threshold exceeded
+REFACTOR: extract DetectionContext dataclass
+AUDIT: backend/app/triage/agents/classification_agent.py
+TESTS: backend/app/correlation/correlation_engine.py
+SEC: backend/app/api/routes/events.py
+BUG: incidents endpoint returns 500 when an incident has no anomalies
+AGENT: scaffold the Executive Summary Agent with Gemini text generation
+RAG: build the deterministic embedder for offline tests
+DETECT: signature frequency strategy with min absolute floor
+EVAL: classification agent accuracy on the database-outage scenario
+ULTRA ALT3: prompt-injection defense strategies for the Remediation Agent
+PRE: shipping the alert engine without rate limiting
+DELPHI: cheapest accurate way to embed runbooks for local execution
+```

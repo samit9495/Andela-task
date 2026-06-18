@@ -1,0 +1,140 @@
+---
+description: Project anatomy — where things live in the Agentic Observability Platform. Keep current as the build progresses.
+globs: backend/**/*.py,frontend/**/*.{ts,tsx},sdk/**/*.py,tests/**/*.py,scripts/**/*.py,infra/**
+alwaysApply: false
+---
+
+# Andela Agentic Observability Platform — Project Map
+
+> **Note**: As soon as the first feature lands, update each section with the actual file paths and 1-line responsibilities. Treat unfilled entries as TODOs to be replaced — not aspirational architecture.
+
+## Top-level (from Req. doc Section 13)
+
+```
+Andela-task/
+├── .cursor/                  # Cursor rules, skills, agents, mcp.json
+├── AGENTS.md                 # short project overview for human + agent readers
+├── README.md                 # public-facing setup, run, test instructions
+├── prompts.md                # complete history of LLM prompts (assessment requirement)
+├── docker-compose.yml        # backend + frontend + SQLite volume
+├── tasks/                    # todo, lessons, manual test scenarios
+├── docs/                     # design notes, ADRs
+├── deck/                     # presentation slides
+├── backend/                  # FastAPI backend (Python)
+├── frontend/                 # React + Vite UI
+├── sdk/                      # watchdog_client Python SDK
+├── tests/                    # backend + AI evaluation tests
+├── infra/                    # Dockerfiles, GitHub Actions, deployment
+├── data/
+│   └── runbooks/             # operational runbooks (RAG source)
+├── scripts/                  # synthetic traffic generator, dev helpers
+├── pyproject.toml            # Python project metadata + deps
+└── .gitignore
+```
+
+## Backend (`backend/app/`)
+
+| Path | Responsibility |
+|------|----------------|
+| `app/main.py` | FastAPI app factory; router includes; exception handlers; lifespan (DB init, runbook loader) |
+| `app/core/config.py` | `Settings` via `pydantic-settings`; env-driven GEMINI_API_KEY, DB URL, thresholds |
+| `app/core/exceptions.py` | `DomainError` and subclasses |
+| `app/db/base.py` | `Base = DeclarativeBase` |
+| `app/db/session.py` | engine, `SessionLocal`, `get_db()` dependency |
+| `app/db/init_db.py` | `Base.metadata.create_all` on startup |
+| `app/models/event.py` | Event ORM model |
+| `app/models/anomaly.py` | Anomaly ORM model |
+| `app/models/incident.py` | Incident ORM model with status/severity enums |
+| `app/models/alert.py` | Alert ORM model |
+| `app/models/runbook.py` | Runbook + embedding ORM model |
+| `app/models/metric_rollup.py` | Pre-aggregated rates per minute |
+| `app/models/service_topology.py` | Service dependency graph |
+| `app/models/llm_evaluation.py` | Persisted prompts + responses + metrics |
+| `app/schemas/` | Pydantic v2 request/response models |
+| `app/repositories/` | Data access — one file per aggregate |
+| `app/ingestion/` | Log ingestion + normalization |
+| `app/detection/strategies/` | Z-Score, EWMA, signature frequency, severity drift |
+| `app/correlation/` | Event correlation engine |
+| `app/topology/` | Service graph + blast radius |
+| `app/incidents/` | Incident lifecycle service |
+| `app/triage/agents/` | Classification, root cause, remediation, executive summary |
+| `app/triage/llm_client.py` | `LLMClient` protocol + Gemini (google-genai) implementation |
+| `app/triage/prompts.py` | Versioned prompt templates |
+| `app/triage/prompt_log.py` | Persists every prompt to `llm_evaluations` and appends to `prompts.md` |
+| `app/rag/` | Runbook loader, embedder, retriever |
+| `app/alerts/channels/` | Dashboard, webhook, email_sim, slack_sim |
+| `app/risk/risk_score_service.py` | Risk score calculation |
+| `app/api/routes/` | Thin HTTP handlers |
+
+## Frontend (`frontend/`)
+
+Stack: React + Vite + TypeScript (strict) + Recharts. UI inspection done via the Browser MCP.
+
+| Path | Responsibility |
+|------|----------------|
+| `frontend/index.html`, `vite.config.ts`, `tsconfig.json` | Vite config |
+| `frontend/src/main.tsx` | React entry, Router, QueryClient |
+| `frontend/src/App.tsx` | Layout + routes |
+| `frontend/src/pages/OverviewPage.tsx` | Risk score, active incidents, alerts, services |
+| `frontend/src/pages/IncidentCenterPage.tsx` | Incident list with severity, status, root cause |
+| `frontend/src/pages/TopologyPage.tsx` | Service graph, dependency tree, blast radius |
+| `frontend/src/pages/TrendsPage.tsx` | Error rate trend, incident timeline, severity, health |
+| `frontend/src/pages/AIAnalysisPage.tsx` | Classification, root cause, remediation, executive summary, runbook references |
+| `frontend/src/components/` | Domain components organized by page |
+| `frontend/src/api/` | Typed fetchers (one file per resource) |
+| `frontend/src/hooks/` | Shared hooks |
+| `frontend/src/lib/` | Pure helpers |
+| `frontend/src/test/` | Vitest setup |
+
+## SDK (`sdk/watchdog_client/`)
+
+| Path | Responsibility |
+|------|----------------|
+| `sdk/watchdog_client/__init__.py` | Public API: `create_event`, `create_batch`, `get_incidents`, `get_alerts`, `get_risk_score`, `get_health` |
+| `sdk/watchdog_client/client.py` | HTTP client with typed methods |
+| `sdk/watchdog_client/models.py` | Pydantic models mirroring API contracts |
+| `sdk/watchdog_client/exceptions.py` | SDK-level exceptions |
+| `sdk/pyproject.toml` | SDK package metadata, semantic version |
+| `sdk/README.md` | SDK usage examples |
+| `sdk/tests/` | SDK tests |
+
+## Tests (`tests/`)
+
+| Path | Covers |
+|------|--------|
+| `tests/conftest.py` | engine, db, client, fake LLM fixtures |
+| `tests/unit/test_event_normalization.py` | normalization signatures |
+| `tests/unit/test_detection_*.py` | each detection strategy |
+| `tests/unit/test_correlation_engine.py` | correlation grouping |
+| `tests/unit/test_risk_score.py` | risk score formula |
+| `tests/unit/test_topology.py` | blast radius |
+| `tests/unit/test_triage_*.py` | each agent + executive summary |
+| `tests/integration/test_events_api.py` | HTTP layer for events |
+| `tests/integration/test_incidents_api.py` | HTTP layer for incidents |
+| `tests/integration/test_pipeline_end_to_end.py` | ingestion → detection → incident |
+| `tests/ai_eval/` | classification / root-cause / remediation accuracy |
+
+## Scripts (`scripts/`)
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/synth_traffic.py` | Generate the 7 demo scenarios (normal, DB outage, auth failures, throttling, memory leak, dependency failure, Black Friday) |
+| `scripts/seed_runbooks.py` | Load runbooks into the embedding store |
+
+## Infra (`infra/`)
+
+| Path | Responsibility |
+|------|----------------|
+| `infra/Dockerfile.backend` | Backend image |
+| `infra/Dockerfile.frontend` | Frontend image |
+| `infra/.github/workflows/ci.yml` | Ruff → Black → Mypy → Pytest pipeline |
+
+## See also
+
+- `andela-fastapi-core.mdc` — the layering rules.
+- `andela-frontend-react.mdc` — frontend conventions.
+- `andela-testing.mdc` — tests directory layout.
+- `andela-agentic-ai.mdc` — triage subsystem.
+- `andela-rag.mdc` — runbook RAG.
+- `andela-detection-engine.mdc` — detection strategies.
+- `andela-sdk.mdc` — Python SDK conventions.

@@ -1,0 +1,117 @@
+---
+description: SQL safety — parameterized SQLAlchemy queries, no f-strings or .format() with user data, ORM by default
+globs: backend/app/repositories/**/*.py,backend/app/db/**/*.py,backend/app/models/**/*.py,backend/app/**/*service*.py
+alwaysApply: false
+---
+
+# Andela SQL Safety
+
+## ORM by default
+
+Use SQLAlchemy 2.x style (`select(...)`, `Session.execute()`, `Session.scalars()`) for all queries unless there is a measured reason to drop to raw SQL.
+
+```python
+stmt = (
+    select(Event)
+    .where(Event.service == service)
+    .where(Event.timestamp >= since)
+    .order_by(Event.timestamp.desc())
+    .limit(limit)
+    .offset(offset)
+)
+events = db.scalars(stmt).all()
+```
+
+## Parameterized values, always
+
+Never interpolate user-supplied data into a SQL string via f-strings, `%`, `+`, or `.format()`. SQLAlchemy bound parameters handle this automatically — the only way to get hurt is to bypass them.
+
+```python
+# BAD — SQL injection
+db.execute(text(f"SELECT * FROM events WHERE service = '{service}'"))
+
+# BAD — same risk, different syntax
+db.execute(text("SELECT * FROM events WHERE service = '{}'".format(service)))
+
+# GOOD — bound parameter
+db.execute(text("SELECT * FROM events WHERE service = :service"), {"service": service})
+
+# BETTER — use the ORM
+db.scalars(select(Event).where(Event.service == service)).all()
+```
+
+## When raw SQL is justified
+
+Only when:
+
+- A pure SQL aggregate is meaningfully simpler than the ORM expression (e.g., a window function for rolling rates).
+- You have measured the ORM to be too slow on the actual data volume.
+
+Even then:
+
+- Use `text("... :param ...")` with a parameter dict.
+- Keep the query in `backend/app/repositories/<aggregate>_repository.py`, not in the route or service.
+- Add a unit test that pins the SQL output for at least one input.
+
+## Bulk insert / batch ingestion
+
+The batch ingestion endpoint can receive up to 1000 events. Use `Session.execute(insert(Event), [...])` — it goes through parameter binding.
+
+```python
+db.execute(
+    insert(Event),
+    [
+        {"service": e.service, "level": e.level, "message": e.message, "timestamp": e.timestamp}
+        for e in events
+    ],
+)
+db.commit()
+```
+
+## `IN (...)` clauses
+
+The ORM does this safely:
+
+```python
+db.scalars(select(Anomaly).where(Anomaly.id.in_(ids))).all()
+```
+
+If you must write it as raw text, use SQLAlchemy's `expanding=True`:
+
+```python
+from sqlalchemy import text, bindparam
+stmt = text("SELECT * FROM anomalies WHERE id IN :ids").bindparams(
+    bindparam("ids", expanding=True)
+)
+db.execute(stmt, {"ids": ids})
+```
+
+## Identifiers (table/column names)
+
+These cannot be bound parameters. If you need a dynamic identifier (rare for this project — possibly for sortable list endpoints), validate it against an allow-list of known names before substituting.
+
+```python
+ALLOWED_SORT = {
+    "timestamp": Event.timestamp,
+    "level": Event.level,
+    "service": Event.service,
+}
+
+def list_sorted(self, sort_by: str = "timestamp"):
+    column = ALLOWED_SORT.get(sort_by)
+    if column is None:
+        raise InvalidSortField(sort_by)
+    return self.db.scalars(select(Event).order_by(column.desc())).all()
+```
+
+## Secret-free
+
+- Never hardcode database URLs, passwords, or API keys (Gemini, GitHub, etc.) in source.
+- `backend/app/core/config.py` reads from environment via `pydantic-settings` with sensible defaults for SQLite local dev (`sqlite:///./var/watchdog.db`).
+
+## See also
+
+- `andela-fastapi-core.mdc` — overall layering.
+- `andela-security.mdc` — secrets, input validation, error sanitization.
+- `.cursor/skills/sql-query-audit/SKILL.md` — how to audit existing queries.
+- `andela-error-handling.mdc` — surfacing DB errors as proper HTTP responses.

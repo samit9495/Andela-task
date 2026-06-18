@@ -1,0 +1,145 @@
+---
+description: watchdog_client Python SDK — type hints, docstrings, examples, semantic versioning, no business logic, decoupled from the backend
+globs: sdk/**/*.py,sdk/**/*.toml,sdk/README.md
+alwaysApply: false
+---
+
+# Andela SDK (`watchdog_client`)
+
+The SDK (Req. doc Section 7) is a thin, typed Python client that wraps the platform API. It is **separately versioned** and **independent** of `backend/`.
+
+## Package layout
+
+```
+sdk/
+├── pyproject.toml                      # name=watchdog_client, separate semver
+├── README.md                           # quickstart + examples
+├── watchdog_client/
+│   ├── __init__.py                     # public API surface only
+│   ├── client.py                       # WatchdogClient class
+│   ├── models.py                       # Pydantic models mirroring API contracts
+│   └── exceptions.py                   # SDK-specific exceptions
+└── tests/
+    ├── conftest.py
+    ├── test_client.py
+    └── test_models.py
+```
+
+## Public API (Req. doc Section 7)
+
+These are the **only** functions exposed at the top level:
+
+```python
+from watchdog_client import WatchdogClient
+
+client = WatchdogClient(base_url="http://localhost:8000", api_key="...")
+
+client.create_event(event)
+client.create_batch(events)
+client.get_incidents(status=None, severity=None, limit=50, offset=0)
+client.get_alerts(...)
+client.get_risk_score()
+client.get_health()
+```
+
+The function signatures are fully typed, with `Literal` enums where the API has a fixed set, and `pydantic.BaseModel` for structured input/output.
+
+## Design rules
+
+- **No business logic.** The SDK does not detect anomalies, run agents, or compute risk scores. It calls the backend.
+- **Stateless.** Each method call is independent. No cached state beyond the `requests.Session` connection pool.
+- **Sync by default.** A future `WatchdogAsyncClient` can mirror the same shape — keep the contract identical so users can swap.
+- **Retries** on connection errors and 5xx responses, with exponential backoff. Configurable `max_retries`.
+- **Timeouts** on every HTTP call, default 5s. Configurable.
+- **No logging by default.** Provide a `logger` parameter; never silently `print`.
+
+## Models
+
+```python
+# sdk/watchdog_client/models.py
+from datetime import datetime
+from typing import Literal
+from pydantic import BaseModel, Field, ConfigDict
+
+
+class EventCreate(BaseModel):
+    service: str = Field(min_length=1, max_length=100)
+    level: Literal["INFO", "WARN", "ERROR", "CRITICAL"]
+    message: str = Field(min_length=1, max_length=4000)
+    timestamp: datetime
+    hostname: str | None = None
+    environment: str | None = None
+    metadata: dict | None = None
+
+
+class IncidentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+    severity: Literal["critical", "high", "medium", "low"]
+    status: Literal["open", "investigating", "mitigated", "resolved"]
+    created_at: datetime
+    resolved_at: datetime | None = None
+    root_cause: str | None = None
+    summary: str | None = None
+```
+
+These mirror the backend Pydantic schemas. **Drift is a bug** — keep them in sync.
+
+## Exceptions
+
+```python
+# sdk/watchdog_client/exceptions.py
+class WatchdogError(Exception):
+    """Base for all SDK errors."""
+
+class WatchdogAPIError(WatchdogError):
+    """The API returned an error response."""
+    def __init__(self, status_code: int, code: str, detail: str):
+        self.status_code = status_code
+        self.code = code
+        self.detail = detail
+        super().__init__(f"[{status_code}] {code}: {detail}")
+
+class WatchdogTimeout(WatchdogError):
+    pass
+
+class WatchdogValidationError(WatchdogError):
+    pass
+```
+
+## Versioning (semver)
+
+- The SDK has its own `pyproject.toml` with its own version.
+- **Major** bump for breaking changes to public function signatures or returned models.
+- **Minor** bump for new endpoints or new optional parameters.
+- **Patch** bump for bug fixes that do not change behavior.
+- The backend API and the SDK can be on different majors. Document compatibility in `sdk/README.md`.
+
+## Documentation
+
+- Every public method has a docstring with: one-line summary, parameters, returns, raises, and a 3-line example.
+- `sdk/README.md` has a quickstart that runs against `localhost:8000`.
+- `sdk/examples/` (optional) contains runnable scripts (`ingest_logs.py`, `poll_incidents.py`).
+
+## Tests
+
+- The SDK is tested against a `respx`-mocked HTTP layer or an `httpx.MockTransport`. **Never** against a live backend.
+- Every public method has at least: a happy path test, a 4xx test (raises `WatchdogAPIError`), and a timeout test.
+- Test layout mirrors the package: `tests/test_client.py`, `tests/test_models.py`.
+
+## Anti-patterns
+
+- Importing from `backend.app` inside the SDK. The SDK is a separate package.
+- Embedding business logic ("if status is open, sleep and retry").
+- Catching all exceptions and returning `None`. Raise SDK exceptions; the caller decides.
+- Hardcoding `localhost` URLs.
+- Logging the API key.
+
+## See also
+
+- `andela-fastapi-core.mdc` — the backend the SDK calls.
+- `andela-api-routes.mdc` — endpoint contracts the SDK mirrors.
+- `andela-testing.mdc` — testing rules apply to the SDK too.
+- `andela-security.mdc` — secret hygiene for API keys.
+- `.cursor/skills/andela-sdk-client/SKILL.md` — scaffold a new SDK method test-first.

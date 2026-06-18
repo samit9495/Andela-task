@@ -1,0 +1,236 @@
+---
+description: Testing — pytest for backend, Vitest + RTL for frontend, TDD-first, 90% coverage on changed modules, AI evaluation tests for agentic outputs
+alwaysApply: true
+---
+
+# Andela Testing
+
+The authoritative TDD process lives in `andela-tdd-discipline.mdc`. This rule covers **how** tests are written, organized, and executed.
+
+## Backend: pytest + httpx TestClient
+
+### Stack
+
+- `pytest`, `pytest-cov` (coverage), `httpx` (FastAPI client), `pytest-asyncio` only if async tests are needed.
+- Database under test: **in-memory SQLite** via a session fixture so every test starts clean.
+
+### Layout
+
+```
+backend/
+  app/
+    ...
+tests/
+├── conftest.py                            # shared fixtures: engine, session, client, fake LLM client
+├── unit/
+│   ├── test_event_normalization.py
+│   ├── test_detection_z_score.py
+│   ├── test_detection_signature_frequency.py
+│   ├── test_correlation_engine.py
+│   ├── test_risk_score.py
+│   └── test_topology.py
+├── integration/
+│   ├── test_events_api.py
+│   ├── test_incidents_api.py
+│   ├── test_alerts_api.py
+│   └── test_pipeline_end_to_end.py
+├── ai_eval/
+│   ├── test_classification_accuracy.py
+│   ├── test_root_cause_accuracy.py
+│   └── test_remediation_quality.py
+└── sdk/
+    └── test_watchdog_client.py
+```
+
+### Naming
+
+- Files: `test_<module_under_test>.py`.
+- Classes: `class TestDetectionEngine:`.
+- Methods: `test_<action>_<condition>_<expected>` — e.g. `test_z_score_detector_flags_anomaly_when_rate_exceeds_threshold`.
+
+### Shared fixtures (`tests/conftest.py`)
+
+```python
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+
+from app.db.base import Base
+from app.db.session import get_db
+from app.main import app
+from app.triage.llm_client import LLMClient
+
+
+@pytest.fixture
+def engine():
+    eng = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(eng)
+    yield eng
+    Base.metadata.drop_all(eng)
+
+
+@pytest.fixture
+def db(engine) -> Session:
+    SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@pytest.fixture
+def fake_llm() -> LLMClient:
+    """Deterministic LLM fake — returns canned structured outputs.
+
+    Real Gemini calls are mocked at this boundary. The agentic workflow
+    is tested against the protocol, not against a network.
+    """
+    ...
+
+
+@pytest.fixture
+def client(db, fake_llm) -> TestClient:
+    app.dependency_overrides[get_db] = lambda: db
+    # also override the LLM client provider with fake_llm
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+```
+
+### The default test
+
+```python
+class TestZScoreDetector:
+    def test_flags_anomaly_when_rate_exceeds_threshold(self, db):
+        detector = ZScoreDetector(threshold=3.0)
+        baseline = [10, 11, 9, 12, 10, 11, 10, 9, 11, 10]
+        anomaly = detector.detect(baseline=baseline, current=70)
+        assert anomaly is not None
+        assert anomaly.strategy == "z_score"
+```
+
+One assertion per test where practical. A test should fit on a screen.
+
+### Mock at the boundary, not your own code
+
+- Mock `time.time()`, `uuid.uuid4()`, the filesystem, the network, the **Gemini client**.
+- Do NOT mock `EventRepository` when testing `IngestionService` — use a real in-memory DB. The integration is the interesting part.
+- Do NOT mock `DetectionEngine` when testing `CorrelationEngine` — use the real detector with a small fixture.
+- Mock the LLM at the `LLMClient` protocol boundary so agentic tests are deterministic and free.
+
+### Coverage
+
+- Target: **≥ 90%** line coverage on every module touched by the change.
+- Command: `pytest --cov=backend/app --cov-report=term-missing`.
+
+## AI Evaluation Tests (new — required by the assessment)
+
+The Req. doc Section 10 mandates AI evaluation tests. Treat them as a separate suite that does **not** call the live Gemini API.
+
+### What they measure
+
+| Metric | How |
+|--------|-----|
+| **Classification accuracy** | Fixed fixtures of known incidents → expected category (Database/Authentication/Network/Infrastructure/Application). Assert ≥ documented threshold (e.g., 80%). |
+| **Root cause accuracy** | Fixed fixtures → expected root cause keywords/categories. Assert ≥ documented threshold. |
+| **Remediation quality** | Generated remediation contains expected action verbs and references the correct subsystem. Use a rubric, not exact match. |
+
+### How they run
+
+- Use a **recorded** or **canned** LLM fixture (the `fake_llm` fixture, or VCR-style recorded responses). Live API calls in CI are forbidden.
+- Determinism: fix all randomness (`random.seed`, `numpy.random.seed`, LLM `temperature=0`).
+- The fixtures live in `tests/ai_eval/fixtures/` as JSON, one per scenario.
+- Output an evaluation report (e.g., `artifacts/ai_evaluations.md`) with the metric per scenario.
+
+### What they are NOT
+
+- Not a substitute for unit tests on the agent code. Each agent (Classification, Root Cause, Remediation, Executive Summary) still gets unit tests for its prompt construction, output parsing, and failure handling.
+- Not run as part of the inner TDD loop — they are slower. Tag them with `@pytest.mark.ai_eval` and run them in their own CI job.
+
+## Frontend: Vitest + React Testing Library
+
+### Stack
+
+- `vitest`, `@testing-library/react`, `@testing-library/user-event`, `jsdom`.
+
+### Layout
+
+```
+frontend/
+├── src/
+│   ├── components/
+│   │   ├── IncidentCard.tsx
+│   │   ├── IncidentCard.test.tsx       # co-located
+│   │   ├── RiskScoreGauge.tsx
+│   │   └── RiskScoreGauge.test.tsx
+│   └── api/
+│       ├── incidents.ts
+│       └── incidents.test.ts
+```
+
+Co-locate tests with the components they test.
+
+### Behavioral, not snapshot
+
+Tests describe what the user can do:
+
+```tsx
+test("clicking an incident opens the AI analysis panel", async () => {
+  render(<IncidentCenter incidents={[mockIncident]} />)
+  await userEvent.click(screen.getByRole("button", { name: /payment-api/i }))
+  expect(screen.getByRole("heading", { name: /ai analysis/i })).toBeInTheDocument()
+})
+```
+
+Snapshot tests are forbidden — they pin layout, not behavior.
+
+## Characterization tests (refactoring legacy)
+
+If you need to refactor code that has no tests:
+
+1. Write a test that captures the **current** observable behavior, even if it looks wrong.
+2. Commit `test: characterize <function>` so the safety net is visible.
+3. Refactor with that test as the guardrail.
+4. After the refactor, fix any wrong behavior with separate RED → GREEN cycles.
+
+## Determinism
+
+- No `datetime.now()` in tests — inject a clock or freeze with `freezegun`.
+- No `random` without `random.seed(...)`.
+- No `numpy.random` without `np.random.seed(...)`.
+- LLM tests use the fake; if recordings are used, regenerate them deterministically.
+- No reliance on test execution order (`pytest-randomly` is recommended).
+
+## Speed targets
+
+- Full backend suite: < 10s after the first run (excluding `ai_eval` and `slow` marks).
+- Single test: < 100ms unless it integrates the FastAPI client (then < 500ms).
+- AI evaluation suite: documented separately; runs in its own CI job.
+
+## Running
+
+```bash
+# Backend
+pytest -v
+pytest --cov=backend/app --cov-report=term-missing
+pytest tests/unit/test_detection_z_score.py -v
+pytest -m ai_eval                # AI evaluation suite
+pytest -m "not ai_eval and not slow"  # default fast loop
+
+# Frontend
+npm run test
+npm run test -- --coverage
+
+# SDK
+pytest sdk/tests -v
+```
+
+## See also
+
+- `andela-tdd-discipline.mdc` — the loop and laws.
+- `andela-commit-hygiene.mdc` — how each test becomes a commit.
+- `.cursor/skills/andela-tdd-loop/SKILL.md` — the one-screen recipe.
+- `.cursor/skills/andela-testing/SKILL.md` — short companion.
+- `.cursor/rules/andela-agentic-ai.mdc` — why the LLM is mocked at the protocol boundary.
