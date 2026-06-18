@@ -13,6 +13,17 @@
 
 ## Completed
 
+### 2026-06-18 — Phase 1: Ingestion & Normalization
+- [x] Normalizer: strip numbers/UUID/timestamp/IP/hex -> stable signatures; standardize levels — TDD
+- [x] LogLevel enum + Event ORM model (metadata->event_metadata to avoid reserved name) — TDD
+- [x] EventRepository: add/add_all, list (service/level/since filters + pagination), count, count_by_level, count_distinct_services — TDD
+- [x] Event schemas (EventCreate w/ tz-aware validator + extra=forbid, EventRead w/ metadata alias, BatchEventCreate min/max 1000, BatchEventResult) + MetricsResponse
+- [x] IngestionService (normalize + persist single/batch, commit at boundary) — TDD
+- [x] Routes: POST /api/v1/events, POST /api/v1/events/batch, GET /api/v1/events, GET /metrics — TDD
+- [x] Wired routers into main; registered models in init_db + conftest
+- **Status**: done
+- **Summary**: 71 tests pass, 100% coverage; ruff/black/mypy green. CQRS-lite (writes via service, reads via repository). Signatures are placeholder templates (e.g. "Database timeout after <NUM> seconds").
+
 ### 2026-06-18 — Phase 0: Project Skeleton & Tooling
 - [x] pyproject.toml (deps + ruff/black/mypy/pytest/coverage config)
 - [x] .dockerignore (kept existing comprehensive .gitignore and .env.example)

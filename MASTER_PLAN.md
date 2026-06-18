@@ -499,12 +499,12 @@ Rationale: every step keeps the suite green and the app runnable; the demo-criti
 - [x] `tests/conftest.py` fixtures; first test green (21 tests, 100% coverage)
 - [x] GitHub Actions pipeline runs (ruff→black→mypy→pytest)
 
-**M1 — Ingestion**
-- [ ] `POST /api/v1/events` (single) persists normalized event
-- [ ] `POST /api/v1/events/batch` (≤ 1000) persists; > 1000 → 422
-- [ ] `GET /api/v1/events` filters/paginates
-- [ ] `GET /metrics` returns counts
-- [ ] Coverage ≥ 90% on ingestion modules
+**M1 — Ingestion** ✅ (Phase 1 complete)
+- [x] `POST /api/v1/events` (single) persists normalized event
+- [x] `POST /api/v1/events/batch` (≤ 1000) persists; > 1000 → 422; empty → 422
+- [x] `GET /api/v1/events` filters (service/level/since) + paginates; zero → `[]`
+- [x] `GET /metrics` returns counts (total, by-level, monitored services)
+- [x] Coverage 100% on ingestion modules (71 tests total)
 
 **M2 — Detection/Correlation/Incidents/Risk**
 - [ ] Z-Score detector flags anomaly on fixture

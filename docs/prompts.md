@@ -180,3 +180,59 @@ Output before coding:
 
 Wait for approval before generating code.
 ```
+
+## 2026-06-18T08:35:16Z - conversation `4a10cd76-b595-4bb8-8f6d-e7043a7f537e` - mode `agent`
+
+**Attachments:** `andela-testing.mdc`, `andela-error-handling.mdc`, `andela-commit-hygiene.mdc`, `andela-craftsmanship.mdc`, `ai-standards.mdc`, `ai-shortcuts.mdc`, `andela-security.mdc`, `andela-tdd-discipline.mdc`, `andela-code-quality.mdc`, `andela-fastapi-core.mdc`, `andela-agentic-ai.mdc`, `ai-workflow.mdc`, `AGENTS.md`
+
+```text
+We are starting Phase 1 — Ingestion + Normalization.
+
+Read MASTER_PLAN.md and all completed work.
+
+Goal:
+Implement event ingestion, validation, normalization, persistence, metrics, and event retrieval.
+
+Requirements:
+
+1. Implement:
+
+- Event SQLAlchemy model
+- Event repository
+- Event schemas
+- Event normalization service
+- Event ingestion service
+- Events API routes
+- Metrics API route
+
+2. Implement endpoints:
+
+POST /api/v1/events
+POST /api/v1/events/batch
+GET /api/v1/events
+GET /metrics
+
+3. Implement normalization:
+
+- Strip numbers
+- Strip UUIDs
+- Strip timestamps
+- Strip IP addresses
+- Generate stable signatures
+
+4. Batch limit:
+
+- Maximum 1000 events
+
+5. Add comprehensive tests.
+
+6. Update MASTER_PLAN progress.
+
+Before coding provide:
+
+- Design decisions
+- Files to create
+- Files to modify
+- Test plan
+- Acceptance criteria
+```
