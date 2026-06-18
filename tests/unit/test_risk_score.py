@@ -1,6 +1,6 @@
 """Unit tests for RiskScoreService (penalties, clamping, bands)."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from backend.app.incidents.incident_service import IncidentService
 from backend.app.models.anomaly import Anomaly
@@ -10,13 +10,13 @@ from backend.app.risk.risk_score_service import RiskScoreService
 _NOW = datetime(2026, 6, 18, 10, 0, 0, tzinfo=UTC)
 
 
-def _event(level="INFO"):
+def _event(level="INFO", timestamp=None):
     return Event(
         service="payment-api",
         level=level,
         message="msg",
         signature="msg",
-        timestamp=_NOW,
+        timestamp=timestamp or _NOW,
     )
 
 
@@ -49,9 +49,25 @@ class TestRiskScoreService:
         db.commit()
         IncidentService(db).open_incident("payment-api", anomalies, _NOW)  # MEDIUM -> 6
 
-        result = RiskScoreService(db).calculate()
+        result = RiskScoreService(db).calculate(now=_NOW)
 
         assert result.error_penalty == 16.0  # 20% error rate * 0.8
         assert result.incident_penalty == 6.0
         assert result.score == 78.0
         assert result.status == "Warning"
+
+    def test_error_rate_uses_only_events_inside_the_window(self, db):
+        """Old INFO must not dilute a recent ERROR spike (MASTER_PLAN section 26.3)."""
+        long_ago = _NOW - timedelta(hours=2)
+        db.add_all([_event(timestamp=long_ago) for _ in range(1000)])
+        # Inside the default 15-min window: 6 ERROR + 4 INFO -> 60% error rate.
+        db.add_all(
+            [_event("ERROR", timestamp=_NOW) for _ in range(6)]
+            + [_event(timestamp=_NOW) for _ in range(4)]
+        )
+        db.commit()
+
+        result = RiskScoreService(db).calculate(now=_NOW)
+
+        # 60% * 0.8 = 48 -> capped at the documented 40.
+        assert result.error_penalty == 40.0
