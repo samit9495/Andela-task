@@ -42,8 +42,10 @@ class RemediationAgent(StructuredAgent):
 
     @staticmethod
     def _runbook_block(retrieved: list[RetrievalResult]) -> str:
+        """Render retrieved runbooks. Title and content are untrusted -> sanitize."""
         if not retrieved:
             return "- (no runbooks matched)"
         return "\n\n".join(
-            f"### Runbook: {r.title}\n{r.content[:_RUNBOOK_EXCERPT_CHARS]}" for r in retrieved
+            f"Runbook: {sanitize(r.title)}\n{sanitize(r.content[:_RUNBOOK_EXCERPT_CHARS])}"
+            for r in retrieved
         )

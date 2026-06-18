@@ -14,6 +14,7 @@ from backend.app.core.exceptions import (
 )
 from backend.app.triage.llm_client import LLMClient, T
 from backend.app.triage.prompt_log import PromptRecorder
+from backend.app.triage.sanitize import sanitize
 
 _LLM_FAILURES = (LLMTimeout, LLMResponseInvalid, LLMRateLimited, LLMAuthError)
 
@@ -70,8 +71,10 @@ def _elapsed_ms(start: float) -> int:
 
 
 def format_top_events(top_events: list[tuple[str, int, str]]) -> str:
+    """Render the top-events block. Signatures are untrusted and must be sanitized."""
     if not top_events:
         return "- (none)"
     return "\n".join(
-        f"- {signature}: count={count}, level={level}" for signature, count, level in top_events
+        f"- {sanitize(signature)}: count={count}, level={level}"
+        for signature, count, level in top_events
     )
