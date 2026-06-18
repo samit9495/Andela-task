@@ -3,5 +3,6 @@
 from backend.app.models.anomaly import Anomaly
 from backend.app.models.event import Event
 from backend.app.models.incident import Incident
+from backend.app.models.llm_evaluation import LLMEvaluation
 
-__all__ = ["Anomaly", "Event", "Incident"]
+__all__ = ["Anomaly", "Event", "Incident", "LLMEvaluation"]
