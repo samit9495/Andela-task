@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from backend.app.api.routes import health
+from backend.app.api.routes import events, health, metrics
 from backend.app.core.config import get_settings
 from backend.app.core.exceptions import (
     DomainError,
@@ -66,6 +66,8 @@ def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
     register_exception_handlers(app)
     app.include_router(health.router)
+    app.include_router(events.router)
+    app.include_router(metrics.router)
     return app
 
 
