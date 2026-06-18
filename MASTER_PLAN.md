@@ -532,10 +532,11 @@ Rationale: every step keeps the suite green and the app runnable; the demo-criti
 - [x] Dashboard Overview + Incident Center + AI Analysis + Topology render live API data
 - [x] Backend coverage 97% on Phase 4 modules (180 tests); 3 Vitest behavioral tests green
 
-**M5 — SDK + Synthetic Traffic**
-- [ ] `watchdog_client` 6 methods, typed, mocked tests, semver
-- [ ] Synthetic generator: 7 scenarios, deterministic
-- [ ] `db_outage` scenario produces a correlated incident end-to-end
+**M5 — SDK + Synthetic Traffic** ✅ (Phase 5 complete)
+- [x] `watchdog_client` 6 methods, typed, respx-mocked tests, own semver (0.1.0) + CHANGELOG/README; no backend imports
+- [x] Synthetic generator: 7 deterministic scenarios (seeded RNG), CLI sends via SDK in ≤1000 batches
+- [x] `db_outage` scenario produces a DB-error cluster that drives a correlated incident end-to-end (proven at scenario + pipeline level)
+- [x] 223 tests green; SDK + generator coverage 97–99%; ruff/black/mypy clean
 
 **M6 — Hardening + Delivery**
 - [ ] `docker-compose up` runs full stack

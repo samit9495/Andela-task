@@ -13,6 +13,15 @@
 
 ## Completed
 
+### 2026-06-18 — Phase 5: SDK + Synthetic Traffic Generator
+- [x] watchdog_client SDK: 6 typed methods (create_event/create_batch/get_incidents/get_incident/get_risk_score/get_alerts), Pydantic models mirroring backend, no backend imports — TDD with respx
+- [x] SDK error handling: WatchdogAPIError (4xx/5xx + code), WatchdogTimeout (idempotent GET retries), WatchdogValidationError; API-key header; context manager
+- [x] SDK packaging: own sdk/pyproject.toml (semver 0.1.0) + CHANGELOG.md + README.md; `pip install -e sdk`
+- [x] Synthetic generator: pure seeded Scenario protocol + 7 scenarios (normal/db_outage/auth_failures/throttling/memory_leak/dependency_failure/black_friday) — TDD
+- [x] dependency_failure cascades from data/topology.json (reverse-BFS layers) with JSON fallback; CLI sends via SDK in ≤1000 batches with --seed/--duration/--api-url/--dry-run
+- **Status**: done
+- **Summary**: 223 tests pass; SDK 15 respx-mocked tests, generator 31 tests (97–99% coverage); ruff/black/mypy clean across backend+sdk+scripts. CLI verified as `python -m scripts.synth.cli`. SDK is standalone (no backend import); scenarios deterministic given a seed.
+
 ### 2026-06-18 — Phase 4: Alerts + Topology + Dashboard
 - [x] Alert model + repository; 4 simulated channels (dashboard/webhook/email/slack); AlertService fan-out with dedup + rate-limit per incident+channel; sanitized payloads — TDD
 - [x] ServiceTopology model + repository + idempotent JSON seeder (data/topology.json); TopologyEngine blast radius (reverse-BFS) + root service — TDD
