@@ -2,11 +2,10 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import event
-
 from backend.app.incidents.incident_service import IncidentService
 from backend.app.models.anomaly import Anomaly
 from backend.app.repositories.incident_repository import IncidentRepository
+from sqlalchemy import event
 
 _NOW = datetime(2026, 6, 18, 10, 0, 0, tzinfo=UTC)
 

@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from backend.app.models.enums import IncidentStatus
 from backend.app.models.incident import Incident
@@ -26,8 +26,12 @@ class IncidentRepository:
         return int(self._db.execute(select(func.count(Incident.id))).scalar_one())
 
     def list_unresolved(self) -> list[Incident]:
-        stmt = select(Incident).where(Incident.status != IncidentStatus.RESOLVED.value)
-        return list(self._db.execute(stmt).scalars().all())
+        stmt = (
+            select(Incident)
+            .where(Incident.status != IncidentStatus.RESOLVED.value)
+            .options(selectinload(Incident.anomalies))
+        )
+        return list(self._db.execute(stmt).scalars().unique().all())
 
     def find_open_for_service(self, service: str, since: datetime) -> Incident | None:
         stmt = (
@@ -52,5 +56,7 @@ class IncidentRepository:
             stmt = stmt.where(Incident.status == status)
         if severity is not None:
             stmt = stmt.where(Incident.severity == severity)
-        stmt = stmt.order_by(Incident.created_at.desc(), Incident.id.desc())
-        return list(self._db.execute(stmt).scalars().all())
+        stmt = stmt.order_by(Incident.created_at.desc(), Incident.id.desc()).options(
+            selectinload(Incident.anomalies)
+        )
+        return list(self._db.execute(stmt).scalars().unique().all())
