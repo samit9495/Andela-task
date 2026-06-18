@@ -15,6 +15,7 @@ class TestEvaluationReport:
         assert results["classification_accuracy"] >= _THRESHOLD
         assert results["root_cause_accuracy"] >= _THRESHOLD
         assert results["remediation_quality"] >= _THRESHOLD
+        assert results["summary_quality"] >= _THRESHOLD
 
     def test_report_renders_summary_and_rows(self):
         results = evaluate()
@@ -23,6 +24,7 @@ class TestEvaluationReport:
 
         assert "# AI Evaluation Report" in markdown
         assert "Classification accuracy" in markdown
+        assert "Summary quality" in markdown
         for row in results["rows"]:
             assert row["scenario"] in markdown
 
