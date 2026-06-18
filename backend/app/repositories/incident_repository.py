@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from backend.app.models.enums import IncidentStatus
@@ -21,6 +21,9 @@ class IncidentRepository:
 
     def get(self, incident_id: int) -> Incident | None:
         return self._db.get(Incident, incident_id)
+
+    def count(self) -> int:
+        return int(self._db.execute(select(func.count(Incident.id))).scalar_one())
 
     def list_unresolved(self) -> list[Incident]:
         stmt = select(Incident).where(Incident.status != IncidentStatus.RESOLVED.value)

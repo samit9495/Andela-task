@@ -14,7 +14,14 @@ class TestMetrics:
     def test_metrics_empty(self, client):
         body = client.get("/metrics").json()
 
-        assert body == {"total_events": 0, "events_by_level": {}, "monitored_services": 0}
+        assert body == {
+            "total_events": 0,
+            "events_by_level": {},
+            "monitored_services": 0,
+            "total_incidents": 0,
+            "total_alerts": 0,
+            "risk_score": 100.0,
+        }
 
     def test_metrics_counts_events_levels_and_services(self, client):
         client.post("/api/v1/events", json=_payload(service="payment-api", level="error"))

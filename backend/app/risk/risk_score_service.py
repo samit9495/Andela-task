@@ -6,6 +6,7 @@ Risk = 100 - error_penalty - alert_penalty - incident_penalty, clamped [0, 100].
 from sqlalchemy.orm import Session
 
 from backend.app.models.enums import LogLevel, Severity
+from backend.app.repositories.alert_repository import AlertRepository
 from backend.app.repositories.event_repository import EventRepository
 from backend.app.repositories.incident_repository import IncidentRepository
 from backend.app.schemas.risk import RiskScoreResponse
@@ -40,6 +41,7 @@ class RiskScoreService:
     def __init__(self, db: Session) -> None:
         self._event_repo = EventRepository(db)
         self._incident_repo = IncidentRepository(db)
+        self._alert_repo = AlertRepository(db)
 
     def calculate(self) -> RiskScoreResponse:
         total_events = self._event_repo.count()
@@ -50,7 +52,7 @@ class RiskScoreService:
         error_rate_pct = (error_events / total_events * 100.0) if total_events else 0.0
         error_penalty = min(_ERROR_PENALTY_CAP, error_rate_pct * _ERROR_PENALTY_FACTOR)
 
-        open_alerts = 0  # Alerting lands in Phase 4.
+        open_alerts = self._alert_repo.count_distinct_incidents()
         alert_penalty = min(_ALERT_PENALTY_CAP, open_alerts * _ALERT_PENALTY_FACTOR)
 
         incidents = self._incident_repo.list_unresolved()
