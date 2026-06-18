@@ -3,8 +3,11 @@
 Risk = 100 - error_penalty - alert_penalty - incident_penalty, clamped [0, 100].
 """
 
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy.orm import Session
 
+from backend.app.core.config import Settings, get_settings
 from backend.app.models.enums import LogLevel, Severity
 from backend.app.repositories.alert_repository import AlertRepository
 from backend.app.repositories.event_repository import EventRepository
@@ -38,14 +41,17 @@ def _band(score: float) -> str:
 class RiskScoreService:
     """Aggregates error rate, alerts, and incidents into a 0-100 risk score."""
 
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, settings: Settings | None = None) -> None:
         self._event_repo = EventRepository(db)
         self._incident_repo = IncidentRepository(db)
         self._alert_repo = AlertRepository(db)
+        self._settings = settings or get_settings()
 
-    def calculate(self) -> RiskScoreResponse:
-        total_events = self._event_repo.count()
-        by_level = self._event_repo.count_by_level()
+    def calculate(self, *, now: datetime | None = None) -> RiskScoreResponse:
+        reference = now or datetime.now(tz=UTC)
+        window_start = reference - timedelta(seconds=self._settings.risk_error_rate_window_seconds)
+        total_events = self._event_repo.count(since=window_start)
+        by_level = self._event_repo.count_by_level(since=window_start)
         error_events = by_level.get(LogLevel.ERROR.value, 0) + by_level.get(
             LogLevel.CRITICAL.value, 0
         )

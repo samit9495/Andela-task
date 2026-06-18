@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     # --- Alerts (see MASTER_PLAN Component 11) ---
     alert_rate_limit_seconds: int = Field(default=300, alias="ALERT_RATE_LIMIT_SECONDS")
 
+    # --- Risk score (MASTER_PLAN section 26.3) ---
+    risk_error_rate_window_seconds: int = Field(
+        default=900, alias="WATCHDOG_RISK_ERROR_RATE_WINDOW_SECONDS"
+    )
+
     # --- Topology (see MASTER_PLAN Component 6) ---
     topology_path: str = Field(default="data/topology.json", alias="TOPOLOGY_PATH")
 

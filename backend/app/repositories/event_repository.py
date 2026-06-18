@@ -42,11 +42,17 @@ class EventRepository:
         stmt = stmt.order_by(Event.timestamp.desc(), Event.id.desc()).limit(limit).offset(offset)
         return list(self._db.execute(stmt).scalars().all())
 
-    def count(self) -> int:
-        return self._db.execute(select(func.count()).select_from(Event)).scalar_one()
+    def count(self, *, since: datetime | None = None) -> int:
+        stmt = select(func.count()).select_from(Event)
+        if since is not None:
+            stmt = stmt.where(Event.timestamp >= since)
+        return self._db.execute(stmt).scalar_one()
 
-    def count_by_level(self) -> dict[str, int]:
-        stmt = select(Event.level, func.count()).group_by(Event.level)
+    def count_by_level(self, *, since: datetime | None = None) -> dict[str, int]:
+        stmt = select(Event.level, func.count())
+        if since is not None:
+            stmt = stmt.where(Event.timestamp >= since)
+        stmt = stmt.group_by(Event.level)
         return {row[0]: row[1] for row in self._db.execute(stmt).all()}
 
     def count_distinct_services(self) -> int:

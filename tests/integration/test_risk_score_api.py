@@ -6,8 +6,6 @@ from backend.app.incidents.incident_service import IncidentService
 from backend.app.models.anomaly import Anomaly
 from backend.app.models.event import Event
 
-_NOW = datetime(2026, 6, 18, 10, 0, 0, tzinfo=UTC)
-
 
 class TestRiskScoreApi:
     def test_healthy_when_empty(self, client):
@@ -19,6 +17,8 @@ class TestRiskScoreApi:
         assert body["status"] == "Healthy"
 
     def test_reflects_errors_and_incidents(self, client, db):
+        # Risk score windows events; use wall-clock now so the events fall inside.
+        now = datetime.now(tz=UTC)
         db.add_all(
             [
                 Event(
@@ -26,7 +26,7 @@ class TestRiskScoreApi:
                     level=level,
                     message="m",
                     signature="m",
-                    timestamp=_NOW,
+                    timestamp=now,
                 )
                 for level in (["INFO"] * 8 + ["ERROR"] * 2)
             ]
@@ -39,14 +39,14 @@ class TestRiskScoreApi:
                 score=9.0,
                 baseline_value=1.0,
                 current_value=9.0,
-                window_start=_NOW,
-                window_end=_NOW,
+                window_start=now,
+                window_end=now,
             )
             for _ in range(2)
         ]
         db.add_all(anomalies)
         db.commit()
-        IncidentService(db).open_incident("payment-api", anomalies, _NOW)
+        IncidentService(db).open_incident("payment-api", anomalies, now)
 
         response = client.get("/api/v1/risk-score")
 
