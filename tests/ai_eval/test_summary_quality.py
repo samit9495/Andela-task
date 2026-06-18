@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from backend.app.triage.agents.classification_agent import ClassificationAgent
 from backend.app.triage.agents.executive_summary_agent import ExecutiveSummaryAgent
 from backend.app.triage.agents.remediation_agent import RemediationAgent
@@ -34,9 +33,7 @@ class TestSummaryQuality:
             top_events = [tuple(event) for event in payload["top_events"]]
             summary = payload["incident_summary"]
 
-            category = classifier.classify(
-                incident_summary=summary, top_events=top_events
-            ).category
+            category = classifier.classify(incident_summary=summary, top_events=top_events).category
             analysis = analyst.analyze(
                 incident_summary=summary, category=category, top_events=top_events
             )

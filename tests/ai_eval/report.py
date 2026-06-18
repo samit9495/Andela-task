@@ -12,6 +12,7 @@ from backend.app.rag.embedder import HashingEmbedder
 from backend.app.rag.retriever import RunbookRetriever
 from backend.app.rag.runbook_loader import RunbookLoader
 from backend.app.triage.agents.classification_agent import ClassificationAgent
+from backend.app.triage.agents.executive_summary_agent import ExecutiveSummaryAgent
 from backend.app.triage.agents.remediation_agent import RemediationAgent
 from backend.app.triage.agents.root_cause_agent import RootCauseAgent
 from backend.app.triage.mock_ai_client import MockAIClient
@@ -28,11 +29,12 @@ def _load_fixtures() -> list[dict]:
 
 
 def evaluate() -> dict:
-    """Score classification, root-cause, and remediation grounding on fixtures."""
+    """Score classification, root-cause, remediation, and summary on fixtures."""
     client = MockAIClient()
     classifier = ClassificationAgent(client, NullPromptLog())
     analyst = RootCauseAgent(client, NullPromptLog())
     remediator = RemediationAgent(client, NullPromptLog())
+    summarizer = ExecutiveSummaryAgent(client, NullPromptLog())
 
     runbooks = RunbookLoader("data/runbooks").load_all()
     retriever = RunbookRetriever(HashingEmbedder(), runbooks, top_k=3, min_similarity=0.0)
@@ -60,6 +62,15 @@ def evaluate() -> dict:
         )
         remediation_ok = bool(remediation.recommended_actions)
 
+        executive = summarizer.summarize(
+            incident_summary=summary,
+            category=category,
+            root_cause=analysis.root_cause,
+            recommended_actions=remediation.recommended_actions,
+        )
+        summary_text = executive.executive_summary.lower()
+        summary_ok = any(kw.lower() in summary_text for kw in data["expected_summary_keywords"])
+
         rows.append(
             {
                 "scenario": data["scenario"],
@@ -68,6 +79,7 @@ def evaluate() -> dict:
                 "classification_ok": classification_ok,
                 "root_cause_ok": root_cause_ok,
                 "remediation_ok": remediation_ok,
+                "summary_ok": summary_ok,
             }
         )
 
@@ -77,6 +89,7 @@ def evaluate() -> dict:
         "classification_accuracy": sum(r["classification_ok"] for r in rows) / total,
         "root_cause_accuracy": sum(r["root_cause_ok"] for r in rows) / total,
         "remediation_quality": sum(r["remediation_ok"] for r in rows) / total,
+        "summary_quality": sum(r["summary_ok"] for r in rows) / total,
     }
 
 
@@ -96,18 +109,21 @@ def render_markdown(results: dict) -> str:
         f"| Classification accuracy | {results['classification_accuracy']:.0%} |",
         f"| Root-cause accuracy | {results['root_cause_accuracy']:.0%} |",
         f"| Remediation quality | {results['remediation_quality']:.0%} |",
+        f"| Summary quality | {results['summary_quality']:.0%} |",
         "",
         "## Per-scenario",
         "",
-        "| Scenario | Expected | Predicted | Classification | Root cause | Remediation |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| Scenario | Expected | Predicted | Classification | Root cause | "
+        "Remediation | Summary |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     tick = {True: "PASS", False: "FAIL"}
     for row in results["rows"]:
         lines.append(
             f"| {row['scenario']} | {row['expected_category']} | "
             f"{row['predicted_category']} | {tick[row['classification_ok']]} | "
-            f"{tick[row['root_cause_ok']]} | {tick[row['remediation_ok']]} |"
+            f"{tick[row['root_cause_ok']]} | {tick[row['remediation_ok']]} | "
+            f"{tick[row['summary_ok']]} |"
         )
     lines.append("")
     return "\n".join(lines)

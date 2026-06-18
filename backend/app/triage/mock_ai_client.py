@@ -12,6 +12,7 @@ from backend.app.models.enums import IncidentCategory
 from backend.app.triage.llm_client import T
 
 _INPUT_RE = re.compile(r"<<<INPUT>>>(.*?)<<<END>>>", re.DOTALL)
+_EXPLICIT_CATEGORY_RE = re.compile(r"^Category:\s*([a-zA-Z_]+)\s*$", re.MULTILINE)
 
 _CATEGORY_KEYWORDS: dict[IncidentCategory, tuple[str, ...]] = {
     IncidentCategory.DATABASE: ("database", "db", "sql", "pool", "query", "deadlock", "timeout"),
@@ -88,7 +89,18 @@ class MockAIClient:
     @staticmethod
     def _classify(prompt: str) -> IncidentCategory:
         match = _INPUT_RE.search(prompt)
-        text = (match.group(1) if match else prompt).lower()
+        block = match.group(1) if match else prompt
+        # Prompts that explicitly carry a `Category: <name>` hint (e.g. the
+        # executive-summary prompt) should honor it so downstream agents stay
+        # consistent with the upstream classifier; otherwise fall back to the
+        # keyword heuristic.
+        explicit = _EXPLICIT_CATEGORY_RE.search(block)
+        if explicit is not None:
+            try:
+                return IncidentCategory(explicit.group(1).lower())
+            except ValueError:
+                pass
+        text = block.lower()
         for category, keywords in _CATEGORY_KEYWORDS.items():
             if any(keyword in text for keyword in keywords):
                 return category
