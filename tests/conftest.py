@@ -16,6 +16,7 @@ import pytest  # noqa: E402
 from backend.app.db.base import Base  # noqa: E402
 from backend.app.db.session import get_db  # noqa: E402
 from backend.app.main import app  # noqa: E402
+from backend.app.triage.llm_client import FakeLLMClient  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.engine import Engine  # noqa: E402
@@ -45,6 +46,12 @@ def db(engine: Engine) -> Iterator[Session]:
         yield session
     finally:
         session.close()
+
+
+@pytest.fixture
+def fake_llm() -> FakeLLMClient:
+    """Deterministic LLM test double; register canned outputs per schema."""
+    return FakeLLMClient()
 
 
 @pytest.fixture
