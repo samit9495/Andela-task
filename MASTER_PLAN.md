@@ -506,13 +506,14 @@ Rationale: every step keeps the suite green and the app runnable; the demo-criti
 - [x] `GET /metrics` returns counts (total, by-level, monitored services)
 - [x] Coverage 100% on ingestion modules (71 tests total)
 
-**M2 — Detection/Correlation/Incidents/Risk**
-- [ ] Z-Score detector flags anomaly on fixture
-- [ ] Signature-frequency detector flags burst
-- [ ] (Nice) EWMA + severity-drift detectors
-- [ ] Anomalies correlate into a single incident (dedup)
-- [ ] `GET /incidents`, `/incidents/{id}` work
-- [ ] Risk score computed + `/risk-score`, clamped 0–100
+**M2 — Detection/Correlation/Incidents/Risk** ✅ (Phase 2 complete)
+- [x] Z-Score detector flags anomaly on fixture
+- [x] Signature-frequency detector flags burst
+- [x] EWMA detector flags drift (severity-drift deferred — Nice-to-have)
+- [x] Anomalies correlate into a single incident (dedup + window absorption)
+- [x] `GET /api/v1/incidents`, `/incidents/{id}` work (404 on missing)
+- [x] Risk score computed + `/api/v1/risk-score`, clamped 0–100 with bands
+- [x] Coverage 98% (105 tests total); HTTP auto-trigger deferred to Phase 4 (pipeline)
 
 **M3 — Triage + RAG**
 - [ ] `LLMClient` protocol + Gemini impl + Fake/Mock

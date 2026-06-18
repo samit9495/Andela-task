@@ -13,6 +13,18 @@
 
 ## Completed
 
+### 2026-06-18 — Phase 2: Detection + Correlation + Incidents + Risk
+- [x] Detection constants in Settings (z-score/EWMA/signature/bucket/correlation) aliased to .env.example
+- [x] Detector protocol + AnomalySignal; Z-Score, EWMA, Signature-Frequency detectors (pure NumPy) — TDD
+- [x] Severity + IncidentStatus enums; Anomaly & Incident ORM models (1:N relationship) — TDD
+- [x] AnomalyRepository (add_all, exists-dedup) + IncidentRepository (get, list, list_unresolved, find_open_for_service)
+- [x] DetectionService: events -> per-minute bucketed series -> anomalies, naive-datetime coercion, window dedup — TDD
+- [x] IncidentService (open/absorb, count-based severity, lifecycle) + CorrelationEngine (window-based grouping) — TDD
+- [x] RiskScoreService (error/alert/incident penalties, clamp 0-100, Healthy/Warning/Critical bands) — TDD
+- [x] Routes: GET /api/v1/incidents, GET /api/v1/incidents/{id} (404), GET /api/v1/risk-score — TDD
+- **Status**: done
+- **Summary**: 105 tests pass, 98% coverage; ruff/black/mypy green. Detectors are DB-agnostic and Liskov-substitutable. HTTP auto-trigger (ingest->detect->correlate) deferred to Phase 4 per plan; transformation proven at service level.
+
 ### 2026-06-18 — Phase 1: Ingestion & Normalization
 - [x] Normalizer: strip numbers/UUID/timestamp/IP/hex -> stable signatures; standardize levels — TDD
 - [x] LogLevel enum + Event ORM model (metadata->event_metadata to avoid reserved name) — TDD
