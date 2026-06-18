@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-observability-platform"
+version = "0.1.0"
+description = "AI-powered SRE observability platform: ingest logs, detect anomalies, correlate incidents, and triage with Gemini."
+authors = [{ name = "Samit Pawar" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    "sqlalchemy==2.0.36",
+    "pydantic==2.10.4",
+    "pydantic-settings==2.7.1",
+    "numpy==2.2.1",
+    "google-genai==0.8.0",
+    "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-cov==6.0.0",
+    "pytest-randomly==3.16.0",
+    "ruff==0.8.6",
+    "black==24.10.0",
+    "mypy==1.14.1",
+]
+
+[tool.setuptools.packages.find]
+include = ["backend*", "sdk*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["backend", "tests", "sdk"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "C4", "SIM"]
+ignore = []
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.mypy]
+python_version = "3.12"
+packages = ["backend"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+check_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests", "sdk/tests"]
+addopts = "-ra"
+markers = [
+    "ai_eval: AI evaluation tests (run in their own CI job, never call live Gemini)",
+    "slow: slower tests excluded from the fast inner loop",
+]
+
+[tool.coverage.run]
+source = ["backend/app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
