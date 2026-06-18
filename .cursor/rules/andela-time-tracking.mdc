@@ -14,23 +14,37 @@ The user tracks progress against a 4–6h MVP target (16h ceiling) and asks for 
 
 - **start UTC** = the first real working prompt in `docs/prompts.md`:
   `2026-06-18T08:04:59Z` (= 1:35 PM IST). Ignore the earlier `bootstrap` entry.
-- **current UTC** = the ONLY two authoritative sources, in order of preference:
-  1. The `<timestamp>` tag provided in the current turn's context.
-  2. The output of `date -u +"%Y-%m-%dT%H:%M:%SZ"` run **this turn**.
+- **current UTC** = run `date -u +"%Y-%m-%dT%H:%M:%SZ"` **at the moment you write
+  the report**, in the same turn, as the LAST step before composing the answer.
+  This is the ONLY authoritative source for "now".
+
+### Why NOT the `<timestamp>` tag
+
+The `<timestamp>` tag is the time the user **hit send** — it is captured before
+the turn runs. A turn can take many minutes (tools, edits, tests), so by the time
+the report is printed the tag is already stale (e.g. tag says 3:56 PM but the wall
+clock is 4:11 PM). **Never report elapsed time from the `<timestamp>` tag.** It may
+only be used as a rough lower bound for a sanity check, never as "now".
 
 `docs/prompts.md` is appended automatically by the `beforeSubmitPrompt` hook, so
-it is the source of truth for prompt times.
+it is the source of truth for prompt (start) times.
 
 ## Never estimate the current time
 
-The recurring failure is **inventing/extrapolating** the current time (e.g.
-writing "≈ 4:06 PM" when it was 3:46 PM). The current time is NOT something you
-reason about — it is read verbatim from the `<timestamp>` tag or `date`.
+There are two recurring failures:
+1. **Inventing/extrapolating** the current time (e.g. writing "≈ 4:06 PM" when it
+   was 3:46 PM).
+2. **Reusing the stale `<timestamp>` tag** instead of reading the wall clock at
+   report time (e.g. reporting 3:56 PM when the turn finished at 4:11 PM).
+
+The current time is NOT something you reason about or copy from the prompt context
+— it is read verbatim from `date -u`, run in the same turn you report.
 
 - ❌ Do not add "thinking/working time" to the last known time.
 - ❌ Do not round up "to be safe".
-- ✅ Before writing an elapsed figure, read the turn's `<timestamp>` (or run
-  `date -u`) and subtract `start`. Quote the raw timestamp you used.
+- ❌ Do not report "now" from the `<timestamp>` tag.
+- ✅ Run `date -u` as the last step before reporting, subtract `start`, and quote
+  the raw `date -u` output you used.
 
 ## Never do this
 

@@ -15,6 +15,11 @@
 
 ## Lessons
 
+### 2026-06-18 — "Now" must come from `date -u` at report time, not the `<timestamp>` tag
+**Context**: Reporting cumulative elapsed time at the end of Phase 6.
+**Issue**: Reported "now 3:56 PM IST" from the turn's `<timestamp>` tag, but the real time was ~4:11 PM. The tag is captured when the user hits *send*, before the turn runs; a long turn (tools/edits/tests) makes it stale by 10–15 min. The previous fix correctly banned *estimating* time but still allowed the (stale) `<timestamp>` tag as the preferred source — that was the remaining bug.
+**Fix/Insight**: Always run `date -u +"%Y-%m-%dT%H:%M:%SZ"` as the LAST step before writing an elapsed-time report, and use that value as "now". The `<timestamp>` tag is only a rough lower bound, never "now". Updated `.cursor/rules/andela-time-tracking.mdc` to make `date -u` the sole authoritative current-time source and to explain why the tag is stale.
+
 ### 2026-06-18 — Never estimate the current time; read it from the timestamp/date
 **Context**: Reporting cumulative elapsed time at the end of Phase 5.
 **Issue**: Reported "now ≈ 4:06 PM IST" when the real time was 3:46 PM (writing) / 3:52 PM (now). I extrapolated the current time by mentally adding working time to the last value instead of reading it. This is a different failure from the earlier "sum of phases" bug — here the *start* math was fine but the *current time* was invented and overshot by ~20 min.
